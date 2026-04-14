@@ -343,66 +343,152 @@
       .card[data-key="fountain"] {
         background: linear-gradient(
           180deg,
-          #ffe4e6 0%,
-          #ffc7cf 100%
+          #ffe7ea 0%,
+          #ffd2d9 100%
         ) !important;
         border-color: #d85a6f !important;
         box-shadow:
-          0 0 0 2px rgba(255, 255, 255, 0.12),
+          0 0 0 2px rgba(255, 255, 255, 0.14),
           0 8px 20px rgba(0, 0, 0, 0.28),
-          0 0 20px rgba(255, 110, 140, 0.42) !important;
-        filter: saturate(1.08) brightness(1.03);
+          0 0 18px rgba(255, 120, 150, 0.28) !important;
+        filter: saturate(1.06) brightness(1.02);
       }
 
-      .treasure-tier-1 {
+      /* 1단계 */
+      .card.treasure-tier-1 {
         background: linear-gradient(
           180deg,
-          #ffd6dd 0%,
-          #ff9db0 100%
+          #ffe1e8 0%,
+          #ffb7c6 55%,
+          #ff8fa8 100%
         ) !important;
-        border-color: #e14d6a !important;
+        border-color: #f06789 !important;
         box-shadow:
-          0 0 0 2px rgba(255, 255, 255, 0.18),
-          0 8px 22px rgba(0, 0, 0, 0.3),
-          0 0 24px rgba(255, 90, 125, 0.52),
-          0 0 42px rgba(255, 120, 170, 0.42),
-          0 0 68px rgba(255, 180, 210, 0.22) !important;
-        filter: saturate(1.18) brightness(1.1);
+          0 0 0 2px rgba(255, 255, 255, 0.2),
+          0 10px 24px rgba(0, 0, 0, 0.3),
+          0 0 18px rgba(255, 110, 145, 0.48),
+          0 0 34px rgba(255, 135, 175, 0.32),
+          inset 0 1px 0 rgba(255, 255, 255, 0.28) !important;
+        filter: saturate(1.16) brightness(1.08);
       }
 
-      .treasure-tier-2 {
+      .card.treasure-tier-1::before {
+        content: "";
+        position: absolute;
+        inset: -16px;
+        border-radius: 20px;
+        background: radial-gradient(
+          circle,
+          rgba(255, 120, 160, 0.2) 0%,
+          rgba(255, 120, 160, 0.1) 38%,
+          transparent 72%
+        );
+        filter: blur(10px);
+        z-index: -1;
+        pointer-events: none;
+      }
+
+      /* 2단계 */
+      .card.treasure-tier-2 {
         background: linear-gradient(
           180deg,
-          #ffe0f1 0%,
-          #ff78aa 55%,
-          #d94d88 100%
+          #ffe4f4 0%,
+          #ff9ccc 42%,
+          #ff5fa3 78%,
+          #d94686 100%
         ) !important;
-        border-color: #ffb6d2 !important;
+        border-color: #ffb9dc !important;
         box-shadow:
           0 0 0 2px rgba(255, 255, 255, 0.24),
-          0 8px 24px rgba(0, 0, 0, 0.32),
-          0 0 28px rgba(255, 120, 180, 0.62),
-          0 0 52px rgba(255, 85, 145, 0.72),
-          0 0 86px rgba(180, 120, 255, 0.55),
-          0 0 120px rgba(255, 210, 235, 0.3) !important;
+          0 12px 28px rgba(0, 0, 0, 0.34),
+          0 0 24px rgba(255, 110, 175, 0.62),
+          0 0 50px rgba(255, 85, 145, 0.52),
+          0 0 82px rgba(255, 180, 220, 0.34),
+          inset 0 1px 0 rgba(255, 255, 255, 0.34) !important;
         filter: saturate(1.28) brightness(1.16);
       }
 
       .card.treasure-tier-2::before {
         content: "";
         position: absolute;
-        inset: -34px;
+        inset: -26px;
+        border-radius: 24px;
+        background:
+          radial-gradient(
+            circle,
+            rgba(255, 120, 185, 0.34) 0%,
+            rgba(255, 120, 185, 0.18) 28%,
+            transparent 72%
+          ),
+          radial-gradient(
+            circle at 70% 30%,
+            rgba(255, 210, 245, 0.2) 0%,
+            transparent 56%
+          );
+        filter: blur(16px);
+        z-index: -1;
+        pointer-events: none;
+      }
+
+      /* 3단계 */
+      .card.treasure-tier-3 {
+        background: linear-gradient(
+          180deg,
+          #fff0fa 0%,
+          #ffb1df 24%,
+          #ff6fbb 56%,
+          #df4da6 82%,
+          #9d52ff 100%
+        ) !important;
+        border-color: #ffe2f4 !important;
+        box-shadow:
+          0 0 0 2px rgba(255, 255, 255, 0.28),
+          0 14px 32px rgba(0, 0, 0, 0.36),
+          0 0 30px rgba(255, 120, 200, 0.76),
+          0 0 64px rgba(255, 85, 155, 0.68),
+          0 0 108px rgba(180, 120, 255, 0.52),
+          0 0 140px rgba(255, 220, 245, 0.34),
+          inset 0 1px 0 rgba(255, 255, 255, 0.38) !important;
+        filter: saturate(1.36) brightness(1.22);
+      }
+
+      .card.treasure-tier-3::before {
+        content: "";
+        position: absolute;
+        inset: -36px;
         border-radius: 30px;
-        background: radial-gradient(
-          circle,
-          rgba(255, 120, 185, 0.42) 0%,
-          rgba(255, 120, 185, 0.24) 28%,
-          rgba(255, 85, 145, 0.18) 46%,
-          rgba(180, 120, 255, 0.18) 62%,
-          transparent 80%
-        );
+        background:
+          radial-gradient(
+            circle,
+            rgba(255, 120, 200, 0.42) 0%,
+            rgba(255, 120, 200, 0.22) 30%,
+            rgba(180, 120, 255, 0.18) 52%,
+            transparent 78%
+          ),
+          radial-gradient(
+            circle at 30% 20%,
+            rgba(255, 255, 255, 0.22) 0%,
+            transparent 46%
+          );
         filter: blur(22px);
         z-index: -1;
+        pointer-events: none;
+      }
+
+      .card.treasure-tier-3::after {
+        content: "";
+        position: absolute;
+        inset: -10%;
+        background: linear-gradient(
+          120deg,
+          transparent 18%,
+          rgba(255, 255, 255, 0.12) 34%,
+          rgba(255, 255, 255, 0.44) 48%,
+          rgba(255, 255, 255, 0.12) 62%,
+          transparent 78%
+        );
+        transform: translateX(-140%);
+        animation: sheen 2.2s linear infinite;
         pointer-events: none;
       }
 
@@ -1393,7 +1479,7 @@
             </div>
             <button id="startGameBtn">게임 시작</button>
             <div class="start-meta">
-              made by 코볼트 (코딩하는 볼란트)<br />v1.1.30
+              made by 코볼트 (코딩하는 볼란트)<br />v1.1.31
             </div>
           </div>
         </div>
