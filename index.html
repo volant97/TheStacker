@@ -37,6 +37,7 @@
         flex-wrap: wrap;
         gap: 8px;
         align-items: center;
+        align-content: flex-start;
         padding: 8px 10px;
         background: #101722;
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -66,7 +67,8 @@
         animation: dangerPulse 1s infinite;
       }
 
-      #xpBarWrap {
+      #xpBarWrap,
+      #hungerBarWrap {
         width: 220px;
         height: 12px;
         background: rgba(255, 255, 255, 0.1);
@@ -75,10 +77,26 @@
         margin-top: 4px;
       }
 
+      .stat-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+
       #xpBar {
         width: 0%;
         height: 100%;
         background: linear-gradient(90deg, #66c7ff, #b48cff);
+        transition: width 0.2s ease;
+      }
+
+      #hungerBar {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #ffb14a, #ff7a18);
         transition: width 0.2s ease;
       }
 
@@ -452,7 +470,7 @@
         color: #fff;
         font-size: 20px;
         font-weight: 700;
-        cursor: default;
+        cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -465,9 +483,10 @@
         top: 50px;
         left: 0;
         width: 360px;
-        max-height: 65vh;
-        overflow: auto;
-        padding: 12px;
+        max-height: calc(100vh - 86px);
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 0;
         border-radius: 14px;
         background: rgba(8, 12, 18, 0.96);
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -482,15 +501,21 @@
           opacity 0.15s ease,
           transform 0.15s ease,
           visibility 0.15s ease;
-        white-space: pre-line;
         pointer-events: none;
         z-index: 10000;
       }
 
-      #hintWrap:hover #hintTooltip {
+      #hintTooltipBody {
+        padding: 12px;
+        white-space: pre-line;
+      }
+
+      #hintWrap:hover #hintTooltip,
+      #hintWrap:focus-within #hintTooltip {
         opacity: 1;
         visibility: visible;
         transform: translateY(0);
+        pointer-events: auto;
       }
 
       #pauseButton,
@@ -756,24 +781,42 @@
       }
 
       #gameoverBox {
-        width: min(430px, calc(100% - 32px));
-        background: #1d2532;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 18px;
-        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
-        padding: 24px;
+        width: min(440px, calc(100% - 28px));
+        background:
+          radial-gradient(
+            circle at top,
+            rgba(255, 98, 98, 0.18),
+            transparent 28%
+          ),
+          linear-gradient(180deg, #2a1722 0%, #1d2532 100%);
+        border: 1px solid rgba(255, 120, 120, 0.22);
+        border-radius: 22px;
+        box-shadow:
+          0 20px 50px rgba(0, 0, 0, 0.45),
+          0 0 34px rgba(255, 92, 92, 0.14);
+        padding: 28px 24px 24px;
         text-align: center;
       }
 
       #gameoverBox h2 {
-        margin: 0 0 10px;
-        font-size: 28px;
+        margin: 0 0 12px;
+        font-size: 32px;
+        color: #ffd7d7;
+        text-shadow: 0 0 18px rgba(255, 92, 92, 0.22);
       }
 
       #gameoverBox p {
         margin: 0 0 18px;
         color: #dce6f7;
         line-height: 1.5;
+        white-space: pre-line;
+      }
+
+      #gameoverBox button {
+        min-width: 150px;
+        background: linear-gradient(180deg, #ffb199 0%, #ff7f68 100%);
+        color: #33150f;
+        box-shadow: 0 10px 28px rgba(255, 127, 104, 0.22);
       }
 
       .ending-text {
@@ -820,36 +863,74 @@
 
       @media (max-width: 768px) {
         #topbar {
-          gap: 6px;
-          padding: 7px 8px;
+          gap: 4px;
+          padding: 4px 5px;
           align-items: stretch;
-          max-height: 26vh;
-          overflow-y: auto;
+          max-height: 11.2vh;
+          overflow: hidden;
         }
 
         .panel {
           min-width: 0;
-          padding: 5px 8px;
-          font-size: 11px;
-          line-height: 1.35;
-          flex: 1 1 calc(50% - 6px);
-          border-radius: 9px;
+          padding: 3px 5px;
+          font-size: 9px;
+          line-height: 1.05;
+          flex: 1 1 auto;
+          border-radius: 8px;
+        }
+
+        .title-panel {
+          flex: 0 0 60px;
+          padding-left: 4px;
+          padding-right: 4px;
+        }
+
+        .level-panel {
+          flex: 0 0 42px;
+          padding-left: 4px;
+          padding-right: 4px;
+        }
+
+        .hunger-panel,
+        .xp-panel {
+          flex: 1 1 0;
+          min-width: 132px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          white-space: nowrap;
+          overflow: hidden;
         }
 
         #message {
           min-width: 100%;
           flex-basis: 100%;
           order: 99;
+          padding: 2px 5px;
         }
 
-        #xpBarWrap {
-          width: 100%;
-          height: 10px;
+        #xpBarWrap,
+        #hungerBarWrap {
+          width: 76px;
+          min-width: 76px;
+          height: 7px;
+          margin-top: 0;
+          flex: 0 0 76px;
+        }
+
+        .stat-label {
+          font-size: 9px;
+          gap: 3px;
+          justify-content: flex-start;
+          flex-wrap: nowrap;
+          flex: 1 1 auto;
+          min-width: 0;
+          overflow: hidden;
         }
 
         .card {
-          padding: 8px;
-          border-radius: 12px;
+          padding: 6px;
+          border-radius: 10px;
         }
 
         .card-title {
@@ -883,8 +964,18 @@
         }
 
         #hintTooltip {
-          width: min(320px, calc(100vw - 20px));
-          max-height: 50vh;
+          position: absolute;
+          left: 0;
+          top: 44px;
+          width: min(340px, calc(100vw - 20px));
+          max-height: calc(100vh - 120px);
+          font-size: 12px;
+          border-radius: 14px;
+          transform: translateY(-6px);
+        }
+
+        #hintTooltipBody {
+          padding: 10px 12px 14px;
           font-size: 12px;
         }
 
@@ -895,9 +986,9 @@
           top: auto;
           right: auto;
           bottom: max(10px, env(safe-area-inset-bottom));
-          padding: 10px 12px;
-          font-size: 12px;
-          min-height: 42px;
+          padding: 9px 10px;
+          font-size: 11px;
+          min-height: 40px;
         }
 
         #pauseButton {
@@ -921,7 +1012,7 @@
 
         #trashBin {
           right: 8px;
-          bottom: max(8px, env(safe-area-inset-bottom));
+          bottom: calc(max(8px, env(safe-area-inset-bottom)) + 56px);
           width: 92px;
           height: 58px;
           font-size: 10px;
@@ -960,21 +1051,52 @@
 
       @media (max-width: 480px) {
         #topbar {
-          max-height: 22vh;
-          gap: 5px;
-          padding: 6px;
+          max-height: 10.4vh;
+          gap: 3px;
+          padding: 3px;
         }
 
         .panel {
-          flex: 1 1 calc(50% - 5px);
-          font-size: 10px;
-          padding: 5px 7px;
-          border-radius: 9px;
+          flex: 1 1 auto;
+          font-size: 8px;
+          padding: 3px 4px;
+          border-radius: 7px;
+        }
+
+        .title-panel {
+          flex: 0 0 50px;
+          padding-left: 3px;
+          padding-right: 3px;
+        }
+
+        .level-panel {
+          flex: 0 0 36px;
+          padding-left: 3px;
+          padding-right: 3px;
+        }
+
+        .hunger-panel,
+        .xp-panel {
+          min-width: 124px;
+          gap: 4px;
+        }
+
+        #xpBarWrap,
+        #hungerBarWrap {
+          width: 72px;
+          min-width: 72px;
+          height: 6px;
+          flex: 0 0 72px;
+        }
+
+        .stat-label {
+          font-size: 8px;
+          gap: 2px;
         }
 
         .card {
-          padding: 6px;
-          border-radius: 10px;
+          padding: 5px;
+          border-radius: 9px;
         }
 
         .card-title {
@@ -1016,20 +1138,20 @@
         #shopButton,
         #achievementButton {
           bottom: max(8px, env(safe-area-inset-bottom));
-          min-width: 78px;
-          min-height: 38px;
-          padding: 8px 9px;
-          font-size: 11px;
+          min-width: 70px;
+          min-height: 36px;
+          padding: 7px 8px;
+          font-size: 10px;
         }
 
         #pauseButton {
           left: 8px;
         }
         #shopButton {
-          left: 92px;
+          left: 84px;
         }
         #achievementButton {
-          left: 176px;
+          left: 160px;
         }
         #endingButton {
           left: 8px;
@@ -1045,7 +1167,7 @@
           width: 84px;
           height: 52px;
           right: 6px;
-          bottom: max(6px, env(safe-area-inset-bottom));
+          bottom: calc(max(6px, env(safe-area-inset-bottom)) + 48px);
           font-size: 9px;
           border-radius: 12px;
           padding: 5px;
@@ -1053,25 +1175,31 @@
         }
 
         #hintButton {
-          width: 40px;
-          height: 40px;
-          font-size: 18px;
+          width: 38px;
+          height: 38px;
+          font-size: 17px;
         }
 
         #hintTooltip {
+          left: 0;
+          top: 42px;
           width: min(300px, calc(100vw - 16px));
-          top: 44px;
+          max-height: calc(100vh - 108px);
+          font-size: 11px;
+        }
+
+        #hintTooltipBody {
           font-size: 11px;
         }
 
         .card-title {
-          font-size: 14px;
+          font-size: 11px;
         }
         .card-type {
-          font-size: 10px;
+          font-size: 8px;
         }
         .card-desc {
-          font-size: 11px;
+          font-size: 9px;
         }
         .card-stack {
           font-size: 11px;
@@ -1133,15 +1261,22 @@
   <body>
     <div id="app">
       <div id="topbar">
-        <div class="panel"><strong>The Stacker</strong></div>
-        <div class="panel">
-          배고픔: <strong id="hungerStat">20</strong> /
-          <strong id="maxHungerStat">20</strong>
+        <div class="panel title-panel"><strong>The Stacker</strong></div>
+        <div class="panel hunger-panel">
+          <div class="stat-label">
+            배고픔 <strong id="hungerStat">20</strong> /
+            <strong id="maxHungerStat">20</strong>
+          </div>
+          <div id="hungerBarWrap"><div id="hungerBar"></div></div>
         </div>
-        <div class="panel">레벨: <strong id="levelStat">1</strong></div>
-        <div class="panel">
-          경험치: <strong id="xpStat">0</strong> /
-          <strong id="xpNeedStat">12</strong>
+        <div class="panel level-panel">
+          레벨: <strong id="levelStat">1</strong>
+        </div>
+        <div class="panel xp-panel">
+          <div class="stat-label">
+            경험치 <strong id="xpStat">0</strong> /
+            <strong id="xpNeedStat">12</strong>
+          </div>
           <div id="xpBarWrap"><div id="xpBar"></div></div>
         </div>
         <div class="panel">코인: <strong id="coinStat">0</strong></div>
@@ -1149,30 +1284,32 @@
         <div class="panel">카드 수: <strong id="cardCountStat">0</strong></div>
         <div class="panel" id="dangerPanel">위험: 배고픔이 5 이하이다!</div>
         <div class="panel" id="message">
-          최종 목표는 코인을 모아 보물을 다양하게 수집하는 것이다.
+          최종 목표는 코인을 모아 보물을 수집하고, 업적을 달성하는 것이다.
         </div>
       </div>
 
       <div id="board">
         <div id="hintWrap">
-          <div id="hintButton">?</div>
-          <div id="hintTooltip">힌트를 불러오는 중...</div>
+          <button id="hintButton" type="button">?</button>
+          <div id="hintTooltip">
+            <div id="hintTooltipBody">힌트를 불러오는 중...</div>
+          </div>
         </div>
 
         <button id="pauseButton">일시정지</button>
         <button id="shopButton" title="시장을 만든 후에 이용할 수 있다.">
-          상점 열기
+          상점
         </button>
-        <button id="achievementButton">업적 보기</button>
+        <button id="achievementButton">업적</button>
         <button id="endingButton">엔딩 보기</button>
 
         <div id="goalPanel">
           <div><strong>수집 목표</strong></div>
-          <div>코인을 모아 다양한 보물을 모아 컬렉션을 완성해 보자.</div>
+          <div>보물을 찾아보세요</div>
           <div id="goalList"></div>
         </div>
 
-        <div id="trashBin">버리기 통<br />필요 없는 카드를 여기로</div>
+        <div id="trashBin">카드<br />버리기</div>
 
         <div id="shopModal">
           <div id="shopBox">
@@ -1256,7 +1393,7 @@
             </div>
             <button id="startGameBtn">게임 시작</button>
             <div class="start-meta">
-              made by 코볼트 (코딩하는 볼란트)<br />v1.1.26
+              made by 코볼트 (코딩하는 볼란트)<br />v1.1.30
             </div>
           </div>
         </div>
@@ -1278,7 +1415,11 @@
         const overlay = document.getElementById("overlay");
         const restartBtn = document.getElementById("restartBtn");
         const gameoverText = document.getElementById("gameoverText");
+        const hintWrap = document.getElementById("hintWrap");
+        const hintButton = document.getElementById("hintButton");
         const hintTooltip = document.getElementById("hintTooltip");
+        const hintTooltipBody = document.getElementById("hintTooltipBody");
+        const hintCloseButton = document.getElementById("hintCloseButton");
         const dangerPanel = document.getElementById("dangerPanel");
         const shopButton = document.getElementById("shopButton");
         const shopModal = document.getElementById("shopModal");
@@ -1308,6 +1449,7 @@
         const xpStatEl = document.getElementById("xpStat");
         const xpNeedStatEl = document.getElementById("xpNeedStat");
         const xpBarEl = document.getElementById("xpBar");
+        const hungerBarEl = document.getElementById("hungerBar");
         const coinStatEl = document.getElementById("coinStat");
         const timeStatEl = document.getElementById("timeStat");
         const cardCountStatEl = document.getElementById("cardCountStat");
@@ -1323,13 +1465,13 @@
         function updateResponsiveMetrics() {
           const vw = window.innerWidth;
           if (vw <= 480) {
-            CARD_WIDTH = 92;
-            CARD_HEIGHT = 84;
-            COMBINE_DISTANCE = 68;
+            CARD_WIDTH = 78;
+            CARD_HEIGHT = 72;
+            COMBINE_DISTANCE = 60;
           } else if (vw <= 768) {
-            CARD_WIDTH = 108;
-            CARD_HEIGHT = 92;
-            COMBINE_DISTANCE = 76;
+            CARD_WIDTH = 92;
+            CARD_HEIGHT = 80;
+            COMBINE_DISTANCE = 68;
           } else {
             CARD_WIDTH = 158;
             CARD_HEIGHT = 118;
@@ -2290,13 +2432,22 @@
           return Math.max(min, Math.min(max, value));
         }
 
+        function getBottomReservedSpace() {
+          if (window.innerWidth <= 480)
+            return state && state.endingUnlocked ? 92 : 54;
+          if (window.innerWidth <= 768)
+            return state && state.endingUnlocked ? 100 : 58;
+          return 0;
+        }
+
         function clampCardPosition(x, y) {
           const width = board.clientWidth;
           const height = board.clientHeight;
+          const reservedBottom = getBottomReservedSpace();
 
           return {
             x: clamp(x, 0, Math.max(0, width - CARD_WIDTH)),
-            y: clamp(y, 0, Math.max(0, height - CARD_HEIGHT)),
+            y: clamp(y, 0, Math.max(0, height - CARD_HEIGHT - reservedBottom)),
           };
         }
 
@@ -2380,15 +2531,17 @@
             width: board.clientWidth,
             height: board.clientHeight,
           };
+          const reservedBottom = getBottomReservedSpace();
           return {
             x: clamp(x, 0, Math.max(0, width - CARD_WIDTH)),
-            y: clamp(y, 0, Math.max(0, height - CARD_HEIGHT)),
+            y: clamp(y, 0, Math.max(0, height - CARD_HEIGHT - reservedBottom)),
           };
         }
 
         function getSafeSpawnPosition() {
           const width = board.clientWidth;
           const height = board.clientHeight;
+          const reservedBottom = getBottomReservedSpace();
           return {
             x:
               Math.floor(
@@ -2396,7 +2549,8 @@
               ) + 10,
             y:
               Math.floor(
-                Math.random() * Math.max(1, height - CARD_HEIGHT - 30),
+                Math.random() *
+                  Math.max(1, height - CARD_HEIGHT - reservedBottom - 30),
               ) + 10,
           };
         }
@@ -2637,7 +2791,7 @@
 
         function getHints() {
           const hints = [];
-          hints.push("최종 목표: 코인을 모아 보물 컬렉션을 완성하기");
+          hints.push("최종 목표 : 보물 수집 + 업적 달성");
           hints.push("목재 + 돌 → 모닥불");
           hints.push("모닥불 + 돌 → 화로");
           hints.push("목재 + 목재 → 판자");
@@ -2666,9 +2820,6 @@
           if (state.level >= 9) {
             hints.push("판자 + 코인 → 수레");
             hints.push("수레 + 연회 → 축제");
-          }
-          if (state.cards.some((c) => c.key === "market")) {
-            hints.push("시장을 만든 뒤 상점 열기 버튼이 활성화된다");
           }
           return (
             "다음에 해볼 만한 행동\n\n" +
@@ -2848,7 +2999,11 @@ Coming Soon`;
         function endGame() {
           state.gameOver = true;
           clearInterval(state.timer);
-          gameoverText.textContent = `배고픔이 0이 되어 생존에 실패했습니다. 생존 시간: ${state.elapsedTime}초 / 도달 레벨: ${state.level} / 수집 보물 종류: ${countOwnedTreasures()}개`;
+          gameoverText.textContent = `생존에 실패했습니다.
+
+생존 시간 : ${state.elapsedTime}초
+도달 레벨 : ${state.level}
+수집 보물 종류 : ${countOwnedTreasures()}개`;
           overlay.style.display = "flex";
           render();
         }
@@ -2876,7 +3031,14 @@ Coming Soon`;
           timeStatEl.textContent = state.elapsedTime;
           cardCountStatEl.textContent = countTotalCards();
           xpBarEl.style.width = `${(state.xp / state.xpNeeded) * 100}%`;
-          hintTooltip.textContent = getHints();
+          if (hungerBarEl) {
+            hungerBarEl.style.width = `${(state.hunger / state.maxHunger) * 100}%`;
+          }
+          if (hintTooltipBody) {
+            hintTooltipBody.textContent = getHints();
+          } else {
+            hintTooltip.textContent = getHints();
+          }
 
           dangerPanel.style.display =
             state.hunger <= 5 && state.hunger > 0 ? "block" : "none";
@@ -3142,6 +3304,10 @@ Coming Soon`;
             setMessage("엔딩 이후의 세계를 계속 탐험한다.");
           }
         });
+
+        function isMobileView() {
+          return window.innerWidth <= 768;
+        }
 
         function clearBoardCards() {
           board.querySelectorAll(".card").forEach((el) => el.remove());
