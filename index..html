@@ -1,0 +1,2907 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Stacker</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+        background: #18202d;
+        color: #eef4ff;
+      }
+
+      #app {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+      }
+
+      #topbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        padding: 12px 14px;
+        background: #101722;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        position: relative;
+        z-index: 20;
+      }
+
+      .panel {
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 12px;
+        padding: 8px 12px;
+        font-size: 14px;
+        min-width: 120px;
+      }
+
+      #message {
+        flex: 1;
+        min-width: 280px;
+      }
+
+      #dangerPanel {
+        display: none;
+        background: rgba(255, 70, 70, 0.18);
+        border: 1px solid rgba(255, 110, 110, 0.45);
+        color: #ffd7d7;
+        font-weight: 700;
+        animation: dangerPulse 1s infinite;
+      }
+
+      #xpBarWrap {
+        width: 220px;
+        height: 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 999px;
+        overflow: hidden;
+        margin-top: 4px;
+      }
+
+      #xpBar {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #66c7ff, #b48cff);
+        transition: width 0.2s ease;
+      }
+
+      #board {
+        position: relative;
+        flex: 1;
+        overflow: hidden;
+        background:
+          radial-gradient(
+            circle at 15% 20%,
+            rgba(255, 255, 255, 0.04),
+            transparent 18%
+          ),
+          radial-gradient(
+            circle at 80% 20%,
+            rgba(255, 255, 255, 0.03),
+            transparent 18%
+          ),
+          linear-gradient(180deg, #263248 0%, #192230 100%);
+      }
+
+      .card {
+        position: absolute;
+        width: 158px;
+        min-height: 118px;
+        padding: 10px;
+        border-radius: 14px;
+        border: 2px solid #d7cab6;
+        background: #f3eee3;
+        color: #252525;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+        user-select: none;
+        cursor: grab;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition:
+          transform 0.12s ease,
+          box-shadow 0.12s ease,
+          border-color 0.12s ease,
+          opacity 0.12s ease,
+          filter 0.12s ease;
+        overflow: hidden;
+      }
+
+      .card.dragging {
+        cursor: grabbing;
+        transform: scale(1.04);
+        box-shadow: 0 16px 30px rgba(0, 0, 0, 0.38);
+      }
+
+      .card.hover-target {
+        border-color: #78ceff;
+        box-shadow:
+          0 0 0 3px rgba(120, 206, 255, 0.2),
+          0 14px 28px rgba(0, 0, 0, 0.34);
+      }
+
+      .card.spawn {
+        animation: popIn 0.22s ease;
+      }
+
+      .card-title {
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+
+      .card-type {
+        font-size: 11px;
+        opacity: 0.72;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+      }
+
+      .card-desc {
+        font-size: 12px;
+        line-height: 1.35;
+        white-space: pre-line;
+      }
+
+      .card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .card-actions {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .card-stack {
+        background: rgba(0, 0, 0, 0.08);
+        border-radius: 999px;
+        padding: 3px 9px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .mini-btn {
+        border: 0;
+        border-radius: 8px;
+        padding: 4px 8px;
+        background: rgba(17, 24, 39, 0.12);
+        color: #222;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .mini-btn:hover {
+        background: rgba(17, 24, 39, 0.2);
+      }
+
+      .card[data-key="villager"] {
+        background: #fff0dc;
+        border-color: #e5c18d;
+      }
+      .card[data-key="tree"] {
+        background: #e9f7e4;
+        border-color: #9ac487;
+      }
+      .card[data-key="berryBush"] {
+        background: #f8e8ef;
+        border-color: #cf93aa;
+      }
+      .card[data-key="stoneDeposit"] {
+        background: #eceef3;
+        border-color: #a6afbf;
+      }
+      .card[data-key="ironDeposit"] {
+        background: #d9dde6;
+        border-color: #7889a3;
+      }
+      .card[data-key="wood"] {
+        background: #f5ead9;
+        border-color: #c8a777;
+      }
+      .card[data-key="stone"] {
+        background: #eef0f5;
+        border-color: #a4afbf;
+      }
+      .card[data-key="berry"] {
+        background: #ffe3ef;
+        border-color: #df86a9;
+      }
+      .card[data-key="campfire"] {
+        background: #fff0d8;
+        border-color: #ffb36c;
+      }
+      .card[data-key="cookedBerry"] {
+        background: #ffebd1;
+        border-color: #d8a36a;
+      }
+      .card[data-key="soup"] {
+        background: #ffe7c9;
+        border-color: #c89452;
+      }
+      .card[data-key="plank"] {
+        background: #f0e0c7;
+        border-color: #b98f57;
+      }
+      .card[data-key="axe"] {
+        background: #e9edf8;
+        border-color: #8194bf;
+      }
+      .card[data-key="pickaxe"] {
+        background: #e9edf8;
+        border-color: #8194bf;
+      }
+      .card[data-key="house"] {
+        background: #f7efe4;
+        border-color: #caa67a;
+      }
+      .card[data-key="ironOre"] {
+        background: #dde3ea;
+        border-color: #7f8c9f;
+      }
+      .card[data-key="furnace"] {
+        background: #f1e6dd;
+        border-color: #9d7b66;
+      }
+      .card[data-key="ironBar"] {
+        background: #f0f4fa;
+        border-color: #8a9bb4;
+      }
+      .card[data-key="farm"] {
+        background: #eef6d9;
+        border-color: #95b86c;
+      }
+      .card[data-key="wheat"] {
+        background: #fff1b9;
+        border-color: #d0ad48;
+      }
+      .card[data-key="bread"] {
+        background: #ffe2b9;
+        border-color: #ca925a;
+      }
+      .card[data-key="bakery"] {
+        background: #f7e9d8;
+        border-color: #b8895f;
+      }
+      .card[data-key="market"] {
+        background: #e7f0ff;
+        border-color: #7da2d8;
+      }
+      .card[data-key="coin"] {
+        background: #fff3a8;
+        border-color: #c8a11c;
+      }
+      .card[data-key="meat"] {
+        background: #f5d9d9;
+        border-color: #bf7777;
+      }
+      .card[data-key="spice"] {
+        background: #ffe0a6;
+        border-color: #d49332;
+      }
+      .card[data-key="feast"] {
+        background: #ffe4b0;
+        border-color: #d28a2b;
+      }
+      .card[data-key="wagon"] {
+        background: #e8ddc9;
+        border-color: #9a7a49;
+      }
+      .card[data-key="festival"] {
+        background: #e8dcff;
+        border-color: #9b76d8;
+      }
+
+      .card[data-key="hat"],
+      .card[data-key="cape"],
+      .card[data-key="lantern"],
+      .card[data-key="statue"],
+      .card[data-key="banner"],
+      .card[data-key="fountain"] {
+        background: linear-gradient(
+          180deg,
+          #ffe4e6 0%,
+          #ffc7cf 100%
+        ) !important;
+        border-color: #d85a6f !important;
+        box-shadow:
+          0 0 0 2px rgba(255, 255, 255, 0.12),
+          0 8px 20px rgba(0, 0, 0, 0.28),
+          0 0 20px rgba(255, 110, 140, 0.42) !important;
+        filter: saturate(1.08) brightness(1.03);
+      }
+
+      .treasure-tier-1 {
+        background: linear-gradient(
+          180deg,
+          #ffd6dd 0%,
+          #ff9db0 100%
+        ) !important;
+        border-color: #e14d6a !important;
+        box-shadow:
+          0 0 0 2px rgba(255, 255, 255, 0.18),
+          0 8px 22px rgba(0, 0, 0, 0.3),
+          0 0 24px rgba(255, 90, 125, 0.52),
+          0 0 42px rgba(255, 120, 170, 0.42),
+          0 0 68px rgba(255, 180, 210, 0.22) !important;
+        filter: saturate(1.18) brightness(1.1);
+      }
+
+      .treasure-tier-2 {
+        background: linear-gradient(
+          180deg,
+          #ffe0f1 0%,
+          #ff78aa 55%,
+          #d94d88 100%
+        ) !important;
+        border-color: #ffb6d2 !important;
+        box-shadow:
+          0 0 0 2px rgba(255, 255, 255, 0.24),
+          0 8px 24px rgba(0, 0, 0, 0.32),
+          0 0 28px rgba(255, 120, 180, 0.62),
+          0 0 52px rgba(255, 85, 145, 0.72),
+          0 0 86px rgba(180, 120, 255, 0.55),
+          0 0 120px rgba(255, 210, 235, 0.3) !important;
+        filter: saturate(1.28) brightness(1.16);
+      }
+
+      .card.treasure-tier-2::before {
+        content: "";
+        position: absolute;
+        inset: -34px;
+        border-radius: 30px;
+        background: radial-gradient(
+          circle,
+          rgba(255, 120, 185, 0.42) 0%,
+          rgba(255, 120, 185, 0.24) 28%,
+          rgba(255, 85, 145, 0.18) 46%,
+          rgba(180, 120, 255, 0.18) 62%,
+          transparent 80%
+        );
+        filter: blur(22px);
+        z-index: -1;
+        pointer-events: none;
+      }
+
+      .treasure-sheen::after {
+        content: "";
+        position: absolute;
+        inset: -20%;
+        background: linear-gradient(
+          120deg,
+          transparent 20%,
+          rgba(255, 255, 255, 0.1) 35%,
+          rgba(255, 255, 255, 0.35) 48%,
+          rgba(255, 255, 255, 0.1) 62%,
+          transparent 78%
+        );
+        transform: translateX(-140%);
+        animation: sheen 2.8s linear infinite;
+        pointer-events: none;
+      }
+
+      #trashBin {
+        position: absolute;
+        right: 18px;
+        bottom: 18px;
+        width: 170px;
+        height: 110px;
+        border-radius: 18px;
+        border: 2px dashed rgba(255, 255, 255, 0.26);
+        background: rgba(10, 13, 18, 0.34);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 10px;
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 14px;
+        line-height: 1.4;
+        z-index: 5;
+        pointer-events: none;
+        transition:
+          transform 0.12s ease,
+          background 0.12s ease,
+          border-color 0.12s ease;
+      }
+
+      #trashBin.active {
+        background: rgba(180, 50, 50, 0.24);
+        border-color: rgba(255, 140, 140, 0.8);
+        transform: scale(1.03);
+      }
+
+      #hintWrap {
+        position: absolute;
+        left: 16px;
+        top: 16px;
+        z-index: 9999;
+      }
+
+      #hintButton {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(8, 12, 18, 0.78);
+        color: #fff;
+        font-size: 20px;
+        font-weight: 700;
+        cursor: default;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      }
+
+      #hintTooltip {
+        position: absolute;
+        top: 50px;
+        left: 0;
+        width: 360px;
+        max-height: 65vh;
+        overflow: auto;
+        padding: 12px;
+        border-radius: 14px;
+        background: rgba(8, 12, 18, 0.96);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #e7efff;
+        font-size: 13px;
+        line-height: 1.55;
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-6px);
+        transition:
+          opacity 0.15s ease,
+          transform 0.15s ease,
+          visibility 0.15s ease;
+        white-space: pre-line;
+        pointer-events: none;
+        z-index: 10000;
+      }
+
+      #hintWrap:hover #hintTooltip {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+      }
+
+      #pauseButton,
+      #shopButton,
+      #achievementButton,
+      #endingButton {
+        position: absolute;
+        right: 18px;
+        z-index: 40;
+        padding: 10px 14px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(8, 12, 18, 0.78);
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      }
+
+      #pauseButton {
+        top: 16px;
+        right: 148px;
+      }
+      #shopButton {
+        top: 16px;
+      }
+      #achievementButton {
+        top: 68px;
+      }
+      #endingButton {
+        top: 446px;
+        display: none;
+        width: 250px;
+      }
+
+      #pauseButton:hover,
+      #shopButton:hover,
+      #achievementButton:hover,
+      #endingButton:hover {
+        filter: brightness(1.06);
+      }
+
+      #shopButton.locked {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      #goalPanel {
+        position: absolute;
+        right: 18px;
+        top: 120px;
+        width: 250px;
+        z-index: 30;
+        background: rgba(8, 12, 18, 0.76);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        padding: 10px 12px;
+        font-size: 12px;
+        line-height: 1.55;
+        color: #e7efff;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+      }
+
+      #goalList {
+        margin-top: 8px;
+        display: grid;
+        gap: 4px;
+      }
+
+      .goal-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .goal-item.done {
+        color: #9be7a3;
+      }
+
+      #shopModal,
+      #achievementModal,
+      #endingModal,
+      #startModal {
+        position: absolute;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(8, 11, 18, 0.68);
+        z-index: 99998;
+      }
+
+      #startModal {
+        display: flex;
+        background:
+          radial-gradient(
+            circle at top,
+            rgba(255, 255, 255, 0.08),
+            transparent 30%
+          ),
+          linear-gradient(180deg, rgba(8, 11, 18, 0.88), rgba(8, 11, 18, 0.94));
+        z-index: 100000;
+      }
+
+      #shopBox,
+      #achievementBox,
+      #endingBox,
+      #startBox {
+        width: min(760px, calc(100% - 36px));
+        max-height: calc(100% - 36px);
+        overflow: auto;
+        border-radius: 22px;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+        padding: 20px;
+      }
+
+      #shopBox,
+      #achievementBox {
+        background: #1d2532;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      #endingBox {
+        background:
+          radial-gradient(
+            circle at top,
+            rgba(255, 215, 120, 0.16),
+            transparent 28%
+          ),
+          radial-gradient(
+            circle at 80% 20%,
+            rgba(180, 120, 255, 0.16),
+            transparent 24%
+          ),
+          linear-gradient(180deg, #231a35 0%, #1b2231 100%);
+        border: 1px solid rgba(255, 214, 102, 0.24);
+        box-shadow:
+          0 18px 40px rgba(0, 0, 0, 0.35),
+          0 0 30px rgba(255, 214, 102, 0.12);
+      }
+
+      #startBox {
+        width: min(520px, calc(100% - 32px));
+        text-align: center;
+        background:
+          radial-gradient(
+            circle at top,
+            rgba(255, 255, 255, 0.08),
+            transparent 30%
+          ),
+          linear-gradient(180deg, #221a31 0%, #18202d 100%);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow:
+          0 24px 60px rgba(0, 0, 0, 0.45),
+          0 0 40px rgba(180, 120, 255, 0.1);
+        padding: 34px 28px 24px;
+      }
+
+      .start-title {
+        font-size: 38px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        margin-bottom: 12px;
+        color: #fff3dc;
+        text-shadow: 0 0 18px rgba(255, 211, 134, 0.14);
+      }
+
+      .start-story {
+        white-space: pre-line;
+        font-size: 20px;
+        line-height: 1.85;
+        color: #eef3ff;
+        margin-bottom: 26px;
+      }
+
+      .start-meta {
+        margin-top: 22px;
+        font-size: 13px;
+        color: #bcc9e5;
+        line-height: 1.8;
+      }
+
+      #shopHeader,
+      #achievementHeader,
+      #endingHeader {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      #shopGrid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 12px;
+      }
+
+      .shop-item,
+      .achievement-item {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        padding: 12px;
+      }
+
+      .shop-item-title,
+      .achievement-item-title {
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+
+      .shop-item-desc,
+      .achievement-item-desc {
+        font-size: 12px;
+        line-height: 1.45;
+        color: #d6e0f4;
+        min-height: 50px;
+        margin-bottom: 8px;
+      }
+
+      .shop-item-price {
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        color: #ffe38b;
+      }
+
+      .shop-item button {
+        width: 100%;
+        padding: 9px 10px;
+        font-size: 13px;
+      }
+
+      .achievement-item.done {
+        border-color: rgba(115, 215, 125, 0.5);
+        background: rgba(115, 215, 125, 0.08);
+      }
+
+      .achievement-status {
+        font-size: 12px;
+        font-weight: 700;
+        color: #c9d8f5;
+      }
+
+      .achievement-item.done .achievement-status {
+        color: #9be7a3;
+      }
+
+      .close-btn {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+      }
+
+      #overlay {
+        position: absolute;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(8, 11, 18, 0.78);
+        z-index: 99999;
+      }
+
+      #gameoverBox {
+        width: min(430px, calc(100% - 32px));
+        background: #1d2532;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 18px;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+        padding: 24px;
+        text-align: center;
+      }
+
+      #gameoverBox h2 {
+        margin: 0 0 10px;
+        font-size: 28px;
+      }
+
+      #gameoverBox p {
+        margin: 0 0 18px;
+        color: #dce6f7;
+        line-height: 1.5;
+      }
+
+      .ending-text {
+        white-space: pre-line;
+        line-height: 1.9;
+        color: #f2f5ff;
+        font-size: 15px;
+        padding: 18px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .ending-gold {
+        color: #ffd95a;
+        font-weight: 700;
+        text-shadow: 0 0 16px rgba(255, 217, 90, 0.35);
+      }
+
+      button {
+        border: 0;
+        border-radius: 12px;
+        padding: 12px 16px;
+        background: #79d0ff;
+        color: #102033;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button:hover {
+        filter: brightness(1.05);
+      }
+
+      #startGameBtn {
+        min-width: 180px;
+        font-size: 18px;
+        padding: 14px 22px;
+        background: linear-gradient(180deg, #ffd88d 0%, #ffbf5f 100%);
+        color: #3a2712;
+        box-shadow: 0 10px 24px rgba(255, 191, 95, 0.18);
+      }
+
+      @keyframes popIn {
+        0% {
+          transform: scale(0.74);
+          opacity: 0;
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      @keyframes dangerPulse {
+        0% {
+          box-shadow: 0 0 0 rgba(255, 80, 80, 0);
+        }
+        50% {
+          box-shadow: 0 0 18px rgba(255, 80, 80, 0.25);
+        }
+        100% {
+          box-shadow: 0 0 0 rgba(255, 80, 80, 0);
+        }
+      }
+
+      @keyframes sheen {
+        0% {
+          transform: translateX(-140%) skewX(-18deg);
+        }
+        100% {
+          transform: translateX(180%) skewX(-18deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="topbar">
+        <div class="panel"><strong>The Stacker</strong></div>
+        <div class="panel">
+          배고픔: <strong id="hungerStat">20</strong> /
+          <strong id="maxHungerStat">20</strong>
+        </div>
+        <div class="panel">레벨: <strong id="levelStat">1</strong></div>
+        <div class="panel">
+          경험치: <strong id="xpStat">0</strong> /
+          <strong id="xpNeedStat">12</strong>
+          <div id="xpBarWrap"><div id="xpBar"></div></div>
+        </div>
+        <div class="panel">코인: <strong id="coinStat">0</strong></div>
+        <div class="panel">생존 시간: <strong id="timeStat">0</strong>초</div>
+        <div class="panel">카드 수: <strong id="cardCountStat">0</strong></div>
+        <div class="panel" id="dangerPanel">위험: 배고픔이 5 이하이다!</div>
+        <div class="panel" id="message">
+          최종 목표는 코인을 모아 보물을 다양하게 수집하는 것이다.
+        </div>
+      </div>
+
+      <div id="board">
+        <div id="hintWrap">
+          <div id="hintButton">?</div>
+          <div id="hintTooltip">힌트를 불러오는 중...</div>
+        </div>
+
+        <button id="pauseButton">일시정지</button>
+        <button id="shopButton" title="시장을 만든 후에 이용할 수 있다.">
+          상점 열기
+        </button>
+        <button id="achievementButton">업적 보기</button>
+        <button id="endingButton">엔딩 보기</button>
+
+        <div id="goalPanel">
+          <div><strong>수집 목표</strong></div>
+          <div>코인을 모아 다양한 보물을 모아 컬렉션을 완성해 보자.</div>
+          <div id="goalList"></div>
+        </div>
+
+        <div id="trashBin">버리기 통<br />필요 없는 카드를 여기로</div>
+
+        <div id="shopModal">
+          <div id="shopBox">
+            <div id="shopHeader">
+              <div>
+                <div style="font-size: 20px; font-weight: 700">보물 상점</div>
+                <div style="font-size: 13px; color: #d6e0f4; margin-top: 4px">
+                  시장과 빵집으로 코인을 모아 보물을 구매하자.
+                </div>
+              </div>
+              <button class="close-btn" id="closeShopBtn">닫기</button>
+            </div>
+            <div
+              id="shopCoinText"
+              style="
+                margin-bottom: 12px;
+                font-size: 14px;
+                font-weight: 700;
+                color: #ffe38b;
+              "
+            >
+              보유 코인: 0
+            </div>
+            <div id="shopGrid"></div>
+          </div>
+        </div>
+
+        <div id="achievementModal">
+          <div id="achievementBox">
+            <div id="achievementHeader">
+              <div>
+                <div style="font-size: 20px; font-weight: 700">업적</div>
+                <div style="font-size: 13px; color: #d6e0f4; margin-top: 4px">
+                  특이한 행동과 보물 수집으로 업적을 달성할 수 있다.
+                </div>
+              </div>
+              <button class="close-btn" id="closeAchievementBtn">닫기</button>
+            </div>
+            <div id="achievementList" style="display: grid; gap: 12px"></div>
+          </div>
+        </div>
+
+        <div id="endingModal">
+          <div id="endingBox">
+            <div id="endingHeader">
+              <div
+                style="
+                  font-size: 24px;
+                  font-weight: 700;
+                  color: #ffe28a;
+                  text-shadow: 0 0 18px rgba(255, 226, 138, 0.18);
+                "
+              >
+                엔딩
+              </div>
+              <button class="close-btn" id="closeEndingBtn">닫기</button>
+            </div>
+            <div id="endingText" class="ending-text"></div>
+            <div
+              style="
+                margin-top: 18px;
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+              "
+            >
+              <button id="restartEndingBtn">새 게임 시작</button>
+              <button id="continueEndingBtn" class="close-btn">
+                현재 게임 계속하기
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="startModal">
+          <div id="startBox">
+            <div class="start-title">The Stacker</div>
+            <div class="start-story">
+              눈을 떠보니<br />주변에 남은 건 카드뿐이었다.<br /><br />살아남으려면…
+              우선 먹을 것부터 찾아야 한다.
+            </div>
+            <button id="startGameBtn">게임 시작</button>
+            <div class="start-meta">
+              made by 코볼트 (코딩하는 볼란트)<br />v1.1.23
+            </div>
+          </div>
+        </div>
+
+        <div id="overlay">
+          <div id="gameoverBox">
+            <h2>게임 오버</h2>
+            <p id="gameoverText">배고픔이 0이 되어 생존에 실패했습니다.</p>
+            <button id="restartBtn">다시 시작</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const board = document.getElementById("board");
+        const trashBin = document.getElementById("trashBin");
+        const overlay = document.getElementById("overlay");
+        const restartBtn = document.getElementById("restartBtn");
+        const gameoverText = document.getElementById("gameoverText");
+        const hintTooltip = document.getElementById("hintTooltip");
+        const dangerPanel = document.getElementById("dangerPanel");
+        const shopButton = document.getElementById("shopButton");
+        const shopModal = document.getElementById("shopModal");
+        const closeShopBtn = document.getElementById("closeShopBtn");
+        const shopGrid = document.getElementById("shopGrid");
+        const shopCoinText = document.getElementById("shopCoinText");
+        const goalList = document.getElementById("goalList");
+        const pauseButton = document.getElementById("pauseButton");
+        const achievementButton = document.getElementById("achievementButton");
+        const achievementModal = document.getElementById("achievementModal");
+        const closeAchievementBtn = document.getElementById(
+          "closeAchievementBtn",
+        );
+        const achievementList = document.getElementById("achievementList");
+        const endingModal = document.getElementById("endingModal");
+        const endingText = document.getElementById("endingText");
+        const closeEndingBtn = document.getElementById("closeEndingBtn");
+        const restartEndingBtn = document.getElementById("restartEndingBtn");
+        const continueEndingBtn = document.getElementById("continueEndingBtn");
+        const endingButton = document.getElementById("endingButton");
+        const startModal = document.getElementById("startModal");
+        const startGameBtn = document.getElementById("startGameBtn");
+
+        const hungerStatEl = document.getElementById("hungerStat");
+        const maxHungerStatEl = document.getElementById("maxHungerStat");
+        const levelStatEl = document.getElementById("levelStat");
+        const xpStatEl = document.getElementById("xpStat");
+        const xpNeedStatEl = document.getElementById("xpNeedStat");
+        const xpBarEl = document.getElementById("xpBar");
+        const coinStatEl = document.getElementById("coinStat");
+        const timeStatEl = document.getElementById("timeStat");
+        const cardCountStatEl = document.getElementById("cardCountStat");
+        const messageEl = document.getElementById("message");
+
+        const CARD_WIDTH = 158;
+        const CARD_HEIGHT = 118;
+        const TICK_MS = 1000;
+        const COMBINE_DISTANCE = 96;
+        const HUNGER_DECAY_INTERVAL = 3;
+        const RESOURCE_SPAWN_INTERVAL = 7;
+
+        const shopItems = [
+          {
+            key: "hat",
+            name: "모자",
+            price: 4,
+            desc: "가벼운 보물. 수집의 시작.",
+          },
+          {
+            key: "cape",
+            name: "망토",
+            price: 7,
+            desc: "주인공 같은 분위기를 내는 보물.",
+          },
+          {
+            key: "lantern",
+            name: "등불",
+            price: 10,
+            desc: "정착지 분위기를 바꾸는 빛나는 보물.",
+          },
+          {
+            key: "banner",
+            name: "깃발",
+            price: 14,
+            desc: "컬렉션을 눈에 띄게 만드는 장식 보물.",
+          },
+          {
+            key: "statue",
+            name: "석상",
+            price: 18,
+            desc: "정착지의 품격을 올려주는 고급 보물.",
+          },
+          {
+            key: "fountain",
+            name: "분수",
+            price: 24,
+            desc: "수집의 후반 목표가 되는 희귀 보물.",
+          },
+        ];
+
+        const achievementDefs = [
+          {
+            id: "first_split",
+            title: "쪼개기의 미학",
+            desc: "처음으로 카드 분할을 한다.",
+          },
+          {
+            id: "first_merge",
+            title: "정리의 달인",
+            desc: "처음으로 같은 종류 카드 묶음을 합친다.",
+          },
+          {
+            id: "build_furnace",
+            title: "불의 장인",
+            desc: "처음으로 화로를 제작한다.",
+          },
+          {
+            id: "mine_iron",
+            title: "철의 시대",
+            desc: "철 광맥에서 처음으로 철광석을 얻는다.",
+          },
+          {
+            id: "build_market",
+            title: "상권 개척자",
+            desc: "처음으로 시장을 제작한다.",
+          },
+          {
+            id: "make_feast",
+            title: "만찬 준비 완료",
+            desc: "처음으로 연회를 만든다.",
+          },
+          {
+            id: "open_festival",
+            title: "도시의 축제",
+            desc: "처음으로 축제를 연다.",
+          },
+          {
+            id: "full_belly",
+            title: "배부름",
+            desc: "처음으로 스프를 먹는다.",
+          },
+          {
+            id: "treasure_tier3",
+            title: "보물의 정점",
+            desc: "보물 하나를 3등급까지 끌어올린다.",
+          },
+          {
+            id: "buy_first_treasure",
+            title: "첫 보물",
+            desc: "상점에서 처음으로 보물을 구매한다.",
+          },
+          {
+            id: "buy_three_treasures",
+            title: "수집가의 시작",
+            desc: "서로 다른 보물 3종을 모은다.",
+          },
+          {
+            id: "buy_all_treasures",
+            title: "완전한 보물 수집가",
+            desc: "모든 보물을 최소 1개씩 모은다.",
+          },
+        ];
+
+        const cardData = {
+          villager: {
+            name: "사람",
+            type: "unit",
+            description: "자원을 수집하고 음식을 먹는다.",
+            stackable: false,
+          },
+          tree: {
+            name: "나무",
+            type: "resource",
+            description: "사람이나 도끼를 올리면 목재를 얻는다.",
+            stackable: false,
+            basicSource: true,
+          },
+          berryBush: {
+            name: "베리덤불",
+            type: "resource",
+            description: "사람을 올리면 베리를 얻는다.",
+            stackable: false,
+            basicSource: true,
+          },
+          stoneDeposit: {
+            name: "광맥",
+            type: "resource",
+            description: "사람이나 곡괭이를 올리면 돌을 얻는다.",
+            stackable: false,
+            basicSource: true,
+          },
+          ironDeposit: {
+            name: "철 광맥",
+            type: "resource",
+            description: "사람이나 곡괭이를 올리면 철광석을 얻는다.",
+            stackable: false,
+            basicSource: true,
+          },
+          wood: {
+            name: "목재",
+            type: "material",
+            description: "기초 재료.",
+            stackable: true,
+          },
+          stone: {
+            name: "돌",
+            type: "material",
+            description: "건설 재료.",
+            stackable: true,
+          },
+          berry: {
+            name: "베리",
+            type: "food",
+            description: "먹으면 배고픔이 조금 회복된다.",
+            stackable: true,
+          },
+          campfire: {
+            name: "모닥불",
+            type: "building",
+            description: "베리를 구워 더 좋은 음식을 만든다.",
+            stackable: false,
+          },
+          cookedBerry: {
+            name: "구운 베리",
+            type: "food",
+            description: "더 많은 배고픔을 회복한다.",
+            stackable: true,
+          },
+          soup: {
+            name: "스프",
+            type: "food",
+            description: "따뜻한 음식. 먹으면 배부름 업적을 달성할 수 있다.",
+            stackable: true,
+          },
+          plank: {
+            name: "판자",
+            type: "material",
+            description: "가공된 목재.",
+            stackable: true,
+          },
+          axe: {
+            name: "도끼",
+            type: "tool",
+            description: "나무 작업 효율을 높인다.",
+            stackable: false,
+          },
+          pickaxe: {
+            name: "곡괭이",
+            type: "tool",
+            description: "광맥 작업 효율을 높인다.",
+            stackable: false,
+          },
+          house: {
+            name: "집",
+            type: "building",
+            description: "레벨업 시 최대 배고픔 보너스를 준다.",
+            stackable: false,
+          },
+          ironOre: {
+            name: "철광석",
+            type: "material",
+            description: "제련하면 철괴가 된다.",
+            stackable: true,
+          },
+          furnace: {
+            name: "화로",
+            type: "building",
+            description: "철광석을 철괴로 제련한다.",
+            stackable: false,
+          },
+          ironBar: {
+            name: "철괴",
+            type: "material",
+            description: "상위 제작 재료.",
+            stackable: true,
+          },
+          farm: {
+            name: "농장",
+            type: "building",
+            description: "사람을 올리면 밀을 수확한다.",
+            stackable: false,
+            basicSource: true,
+          },
+          wheat: {
+            name: "밀",
+            type: "food-source",
+            description: "화로로 구워 빵을 만들 수 있다.",
+            stackable: true,
+          },
+          bread: {
+            name: "빵",
+            type: "food",
+            description: "든든한 음식.",
+            stackable: true,
+          },
+          bakery: {
+            name: "빵집",
+            type: "building",
+            description: "빵을 코인으로 바꿀 수 있다.",
+            stackable: false,
+          },
+          market: {
+            name: "시장",
+            type: "building",
+            description: "코인으로 다양한 아이템과 보물을 구매한다.",
+            stackable: false,
+          },
+          coin: {
+            name: "코인",
+            type: "currency",
+            description: "빵집과 시장, 보물 상점에서 사용하는 화폐.",
+            stackable: true,
+          },
+          meat: {
+            name: "고기",
+            type: "item",
+            description: "시장에서 구매 가능한 재료.",
+            stackable: true,
+          },
+          spice: {
+            name: "향신료",
+            type: "item",
+            description: "코인과 베리로 조달하는 고급 재료.",
+            stackable: true,
+          },
+          feast: {
+            name: "연회",
+            type: "food",
+            description: "최상급 음식. 큰 회복을 준다.",
+            stackable: true,
+          },
+          wagon: {
+            name: "수레",
+            type: "building",
+            description: "도시를 확장하는 준비물.",
+            stackable: false,
+          },
+          festival: {
+            name: "축제",
+            type: "endgame",
+            description: "정착지를 대표하는 대형 이벤트.",
+            stackable: false,
+          },
+
+          hat: {
+            name: "모자",
+            type: "treasure",
+            description: "수집 목표 보물.",
+            stackable: true,
+            treasure: true,
+          },
+          cape: {
+            name: "망토",
+            type: "treasure",
+            description: "수집 목표 보물.",
+            stackable: true,
+            treasure: true,
+          },
+          lantern: {
+            name: "등불",
+            type: "treasure",
+            description: "수집 목표 보물.",
+            stackable: true,
+            treasure: true,
+          },
+          statue: {
+            name: "석상",
+            type: "treasure",
+            description: "수집 목표 보물.",
+            stackable: true,
+            treasure: true,
+          },
+          banner: {
+            name: "깃발",
+            type: "treasure",
+            description: "수집 목표 보물.",
+            stackable: true,
+            treasure: true,
+          },
+          fountain: {
+            name: "분수",
+            type: "treasure",
+            description: "수집 목표 보물.",
+            stackable: true,
+            treasure: true,
+          },
+        };
+
+        const levelUnlocks = {
+          2: { message: "레벨 2 달성. 판자 제작과 도끼 제작이 열렸다." },
+          3: { message: "레벨 3 달성. 곡괭이와 집 제작이 열렸다." },
+          4: { message: "레벨 4 달성. 화로와 철 광맥이 등장했다." },
+          5: { message: "레벨 5 달성. 농장과 빵 제작이 열렸다." },
+          6: { message: "레벨 6 달성. 빵집과 스프 제작이 열렸다." },
+          7: {
+            message: "레벨 7 달성. 시장 제작과 보물 상점 이용이 가능해졌다.",
+          },
+          8: {
+            message:
+              "레벨 8 달성. 연회 제작으로 더 빠른 성장과 코인 수급이 가능해졌다.",
+          },
+          9: { message: "레벨 9 달성. 축제 준비 단계가 열렸다." },
+        };
+
+        const rules = [
+          {
+            keys: ["villager", "tree"],
+            minLevel: 1,
+            xp: 3,
+            message: "사람이 나무를 베어 목재를 얻었다.",
+            apply: ({ getCenter }) => ({
+              consume: [],
+              spawn: [{ key: "wood", amount: 1, position: getCenter() }],
+            }),
+          },
+
+          {
+            keys: ["villager", "berryBush"],
+            minLevel: 1,
+            xp: 3,
+            message: "사람이 베리를 수확했다.",
+            apply: ({ getCenter }) => ({
+              consume: [],
+              spawn: [{ key: "berry", amount: 1, position: getCenter() }],
+            }),
+          },
+
+          {
+            keys: ["villager", "stoneDeposit"],
+            minLevel: 1,
+            xp: 3,
+            message: "사람이 광맥에서 돌을 캤다.",
+            apply: ({ getCenter }) => ({
+              consume: [],
+              spawn: [{ key: "stone", amount: 1, position: getCenter() }],
+            }),
+          },
+
+          {
+            keys: ["villager", "ironDeposit"],
+            minLevel: 4,
+            xp: 5,
+            message: "사람이 철 광맥에서 철광석을 캤다.",
+            apply: ({ getCenter }) => ({
+              consume: [],
+              spawn: [{ key: "ironOre", amount: 1, position: getCenter() }],
+            }),
+          },
+
+          {
+            keys: ["pickaxe", "ironDeposit"],
+            minLevel: 4,
+            xp: 7,
+            message: "곡괭이로 철 광맥을 파서 철광석 2개를 얻었다.",
+            apply: ({ getCenter }) => ({
+              consume: [],
+              spawn: [{ key: "ironOre", amount: 2, position: getCenter() }],
+            }),
+          },
+
+          {
+            keys: ["villager", "berry"],
+            minLevel: 1,
+            xp: 2,
+            message: "사람이 베리를 먹었다.",
+            apply: ({ source, target }) => {
+              const berryCard = source.key === "berry" ? source : target;
+              return {
+                consume: [{ id: berryCard.id, count: 1 }],
+                spawn: [],
+                effects: () => {
+                  state.hunger = clamp(state.hunger + 4, 0, state.maxHunger);
+                },
+              };
+            },
+          },
+
+          {
+            keys: ["wood", "stone"],
+            minLevel: 1,
+            xp: 5,
+            message: "목재와 돌로 모닥불을 만들었다.",
+            apply: ({ source, target, getCenter }) => ({
+              consume: [
+                { id: source.id, count: 1 },
+                { id: target.id, count: 1 },
+              ],
+              spawn: [{ key: "campfire", amount: 1, position: getCenter() }],
+            }),
+          },
+
+          {
+            keys: ["campfire", "berry"],
+            minLevel: 1,
+            xp: 4,
+            message: "베리를 구워 구운 베리를 만들었다.",
+            apply: ({ source, target, getCenter }) => {
+              const berryCard = source.key === "berry" ? source : target;
+              return {
+                consume: [{ id: berryCard.id, count: 1 }],
+                spawn: [
+                  { key: "cookedBerry", amount: 1, position: getCenter() },
+                ],
+              };
+            },
+          },
+
+          {
+            keys: ["campfire", "bread"],
+            minLevel: 6,
+            xp: 5,
+            message: "빵을 끓여 따뜻한 스프를 만들었다.",
+            apply: ({ source, target, getCenter }) => {
+              const breadCard = source.key === "bread" ? source : target;
+              return {
+                consume: [{ id: breadCard.id, count: 1 }],
+                spawn: [{ key: "soup", amount: 1, position: getCenter() }],
+              };
+            },
+          },
+
+          {
+            keys: ["villager", "cookedBerry"],
+            minLevel: 1,
+            xp: 2,
+            message: "사람이 구운 베리를 먹고 회복했다.",
+            apply: ({ source, target }) => {
+              const foodCard = source.key === "cookedBerry" ? source : target;
+              return {
+                consume: [{ id: foodCard.id, count: 1 }],
+                spawn: [],
+                effects: () => {
+                  state.hunger = clamp(state.hunger + 7, 0, state.maxHunger);
+                },
+              };
+            },
+          },
+
+          {
+            keys: ["villager", "soup"],
+            minLevel: 6,
+            xp: 4,
+            message: "사람이 스프를 먹고 배부르게 쉬었다.",
+            apply: ({ source, target }) => {
+              const soupCard = source.key === "soup" ? source : target;
+              return {
+                consume: [{ id: soupCard.id, count: 1 }],
+                spawn: [],
+                effects: () => {
+                  state.hunger = clamp(state.hunger + 14, 0, state.maxHunger);
+                  unlockAchievement("full_belly");
+                },
+              };
+            },
+          },
+
+          {
+            keys: ["wood", "wood"],
+            minLevel: 2,
+            xp: 5,
+            message: "목재를 가공해 판자를 만들었다.",
+            apply: ({ source, target, getCenter }) => ({
+              consume: [
+                { id: source.id, count: 1 },
+                { id: target.id, count: 1 },
+              ],
+              spawn: [{ key: "plank", amount: 1, position: getCenter() }],
+            }),
+          },
+
+          {
+            keys: ["plank", "stone"],
+            minLevel: 2,
+            xp: 6,
+            message: "판자와 돌로 도끼를 만들었다.",
+            apply: ({ source, target, getCenter }) => ({
+              consume: [
+                { id: source.id, count: 1 },
+                { id: target.id, count: 1 },
+              ],
+              spawn: [{ key: "axe", amount: 1, position: getCenter() }],
+            }),
+          },
+
+          {
+            keys: ["axe", "tree"],
+            minLevel: 2,
+            xp: 5,
+            message: "도끼로 나무를 잘라 목재 2개를 얻었다.",
+            apply: ({ getCenter }) => ({
+              consume: [],
+              spawn: [{ key: "wood", amount: 2, position: getCenter() }],
+            }),
+          },
+
+          {
+            keys: ["stone", "stone"],
+            minLevel: 3,
+            xp: 6,
+            message: "돌을 다듬어 곡괭이를 만들었다.",
+            apply: ({ source, target, getCenter }) => ({
+              consume: [
+                { id: source.id, count: 1 },
+                { id: target.id, count: 1 },
+              ],
+              spawn: [{ key: "pickaxe", amount: 1, position: getCenter() }],
+            }),
+          },
+
+          {
+            keys: ["pickaxe", "stoneDeposit"],
+            minLevel: 3,
+            xp: 5,
+            message: "곡괭이로 광맥을 캐서 돌 2개를 얻었다.",
+            apply: ({ getCenter }) => ({
+              consume: [],
+              spawn: [{ key: "stone", amount: 2, position: getCenter() }],
+            }),
+          },
+
+          {
+            keys: ["plank", "plank"],
+            minLevel: 3,
+            xp: 6,
+            message: "판자를 묶어 집의 골조를 완성했다.",
+            apply: ({ source, target, getCenter }) => ({
+              consume: [
+                { id: source.id, count: 1 },
+                { id: target.id, count: 1 },
+              ],
+              spawn: [{ key: "house", amount: 1, position: getCenter() }],
+            }),
+          },
+
+          {
+            keys: ["campfire", "stone"],
+            minLevel: 4,
+            xp: 8,
+            message: "모닥불을 개조해 화로를 만들었다.",
+            apply: ({ source, target, getCenter }) => {
+              const campfireCard = source.key === "campfire" ? source : target;
+              const stoneCard = source.key === "stone" ? source : target;
+              return {
+                consume: [
+                  { id: campfireCard.id, count: 1 },
+                  { id: stoneCard.id, count: 1 },
+                ],
+                spawn: [{ key: "furnace", amount: 1, position: getCenter() }],
+              };
+            },
+          },
+
+          {
+            keys: ["furnace", "ironOre"],
+            minLevel: 4,
+            xp: 7,
+            message: "철광석을 제련해 철괴를 만들었다.",
+            apply: ({ source, target, getCenter }) => {
+              const oreCard = source.key === "ironOre" ? source : target;
+              return {
+                consume: [{ id: oreCard.id, count: 1 }],
+                spawn: [{ key: "ironBar", amount: 1, position: getCenter() }],
+              };
+            },
+          },
+
+          {
+            keys: ["villager", "farm"],
+            minLevel: 5,
+            xp: 6,
+            message: "농장에서 밀을 수확했다.",
+            apply: ({ getCenter }) => ({
+              consume: [],
+              spawn: [{ key: "wheat", amount: 1, position: getCenter() }],
+            }),
+          },
+
+          {
+            keys: ["furnace", "wheat"],
+            minLevel: 5,
+            xp: 8,
+            message: "밀을 구워 빵을 만들었다.",
+            apply: ({ source, target, getCenter }) => {
+              const wheatCard = source.key === "wheat" ? source : target;
+              return {
+                consume: [{ id: wheatCard.id, count: 1 }],
+                spawn: [{ key: "bread", amount: 1, position: getCenter() }],
+              };
+            },
+          },
+
+          {
+            keys: ["villager", "bread"],
+            minLevel: 5,
+            xp: 3,
+            message: "사람이 빵을 먹고 크게 회복했다.",
+            apply: ({ source, target }) => {
+              const breadCard = source.key === "bread" ? source : target;
+              return {
+                consume: [{ id: breadCard.id, count: 1 }],
+                spawn: [],
+                effects: () => {
+                  state.hunger = clamp(state.hunger + 10, 0, state.maxHunger);
+                },
+              };
+            },
+          },
+
+          {
+            keys: ["bread", "bread"],
+            minLevel: 6,
+            xp: 8,
+            message: "빵을 모아 작은 빵집을 열었다.",
+            apply: ({ source, target, getCenter }) => ({
+              consume: [
+                { id: source.id, count: 1 },
+                { id: target.id, count: 1 },
+              ],
+              spawn: [{ key: "bakery", amount: 1, position: getCenter() }],
+            }),
+          },
+
+          {
+            keys: ["bakery", "bread"],
+            minLevel: 6,
+            xp: 8,
+            message: "빵집에서 빵을 팔아 코인을 얻었다.",
+            apply: ({ source, target, getCenter }) => {
+              const breadCard = source.key === "bread" ? source : target;
+              return {
+                consume: [{ id: breadCard.id, count: 1 }],
+                spawn: [{ key: "coin", amount: 1, position: getCenter() }],
+              };
+            },
+          },
+
+          {
+            keys: ["market", "bread"],
+            minLevel: 7,
+            xp: 9,
+            message: "시장에 빵을 납품해 코인 2개를 벌었다.",
+            apply: ({ source, target, getCenter }) => {
+              const breadCard = source.key === "bread" ? source : target;
+              return {
+                consume: [{ id: breadCard.id, count: 1 }],
+                spawn: [{ key: "coin", amount: 2, position: getCenter() }],
+              };
+            },
+          },
+
+          {
+            keys: ["market", "feast"],
+            minLevel: 8,
+            xp: 12,
+            message: "연회를 개최해 코인 4개를 벌었다.",
+            apply: ({ source, target, getCenter }) => {
+              const feastCard = source.key === "feast" ? source : target;
+              return {
+                consume: [{ id: feastCard.id, count: 1 }],
+                spawn: [{ key: "coin", amount: 4, position: getCenter() }],
+              };
+            },
+          },
+
+          {
+            keys: ["coin", "ironBar"],
+            minLevel: 7,
+            xp: 10,
+            message: "코인과 철괴를 투자해 시장을 열었다.",
+            apply: ({ source, target, getCenter }) => {
+              const coinCard = source.key === "coin" ? source : target;
+              const ironCard = source.key === "ironBar" ? source : target;
+              return {
+                consume: [
+                  { id: coinCard.id, count: 1 },
+                  { id: ironCard.id, count: 1 },
+                ],
+                spawn: [{ key: "market", amount: 1, position: getCenter() }],
+              };
+            },
+          },
+
+          {
+            keys: ["market", "coin"],
+            minLevel: 7,
+            xp: 6,
+            message: "시장에서 코인으로 고기를 구매했다.",
+            apply: ({ source, target, getCenter }) => {
+              const coinCard = source.key === "coin" ? source : target;
+              return {
+                consume: [{ id: coinCard.id, count: 1 }],
+                spawn: [{ key: "meat", amount: 1, position: getCenter() }],
+              };
+            },
+          },
+
+          {
+            keys: ["coin", "berry"],
+            minLevel: 8,
+            xp: 5,
+            message: "코인과 베리로 향신료를 들여왔다.",
+            apply: ({ source, target, getCenter }) => {
+              const coinCard = source.key === "coin" ? source : target;
+              const berryCard = source.key === "berry" ? source : target;
+              return {
+                consume: [
+                  { id: coinCard.id, count: 1 },
+                  { id: berryCard.id, count: 1 },
+                ],
+                spawn: [{ key: "spice", amount: 1, position: getCenter() }],
+              };
+            },
+          },
+
+          {
+            keys: ["bread", "meat"],
+            minLevel: 8,
+            xp: 10,
+            message: "빵과 고기로 연회 음식을 준비했다.",
+            apply: ({ source, target, getCenter }) => ({
+              consume: [
+                { id: source.id, count: 1 },
+                { id: target.id, count: 1 },
+              ],
+              spawn: [{ key: "feast", amount: 1, position: getCenter() }],
+            }),
+          },
+
+          {
+            keys: ["feast", "spice"],
+            minLevel: 8,
+            xp: 10,
+            message: "연회에 향신료를 더해 더욱 특별해졌다.",
+            apply: ({ source, target, getCenter }) => ({
+              consume: [
+                { id: source.id, count: 1 },
+                { id: target.id, count: 1 },
+              ],
+              spawn: [{ key: "feast", amount: 2, position: getCenter() }],
+            }),
+          },
+
+          {
+            keys: ["villager", "feast"],
+            minLevel: 8,
+            xp: 6,
+            message: "사람이 연회를 즐기고 엄청나게 회복했다.",
+            apply: ({ source, target }) => {
+              const feastCard = source.key === "feast" ? source : target;
+              return {
+                consume: [{ id: feastCard.id, count: 1 }],
+                spawn: [],
+                effects: () => {
+                  state.hunger = clamp(state.hunger + 18, 0, state.maxHunger);
+                  addXp(8);
+                },
+              };
+            },
+          },
+
+          {
+            keys: ["plank", "coin"],
+            minLevel: 9,
+            xp: 8,
+            message: "목재와 자본으로 수레를 만들었다.",
+            apply: ({ source, target, getCenter }) => ({
+              consume: [
+                { id: source.id, count: 1 },
+                { id: target.id, count: 1 },
+              ],
+              spawn: [{ key: "wagon", amount: 1, position: getCenter() }],
+            }),
+          },
+
+          {
+            keys: ["wagon", "feast"],
+            minLevel: 9,
+            xp: 12,
+            message: "수레에 연회 음식을 싣고 마침내 축제를 열었다.",
+            apply: ({ source, target, getCenter }) => ({
+              consume: [
+                { id: source.id, count: 1 },
+                { id: target.id, count: 1 },
+              ],
+              spawn: [{ key: "festival", amount: 1, position: getCenter() }],
+            }),
+          },
+        ];
+
+        let state = null;
+
+        function createInitialState() {
+          return {
+            cards: [],
+            nextId: 1,
+            topZ: 1,
+            hunger: 20,
+            maxHunger: 20,
+            elapsedTime: 0,
+            tickCount: 0,
+            gameOver: false,
+            paused: true,
+            ended: false,
+            endingUnlocked: false,
+            timer: null,
+            level: 1,
+            xp: 0,
+            xpNeeded: 12,
+            unlockedBasicSources: new Set([
+              "tree",
+              "berryBush",
+              "stoneDeposit",
+            ]),
+            ownedTreasures: {},
+            achievements: {},
+          };
+        }
+
+        function updateProgressAchievements() {
+          const treasureTypes = countOwnedTreasures();
+          if (treasureTypes >= 1) unlockAchievement("buy_first_treasure");
+          if (treasureTypes >= 3) unlockAchievement("buy_three_treasures");
+          if (treasureTypes >= shopItems.length)
+            unlockAchievement("buy_all_treasures");
+          if (state.cards.some((c) => c.key === "furnace"))
+            unlockAchievement("build_furnace");
+          if (state.cards.some((c) => c.key === "market"))
+            unlockAchievement("build_market");
+          if (state.cards.some((c) => c.key === "feast"))
+            unlockAchievement("make_feast");
+          if (state.cards.some((c) => c.key === "festival"))
+            unlockAchievement("open_festival");
+          if (countItemAmount("ironOre") > 0) unlockAchievement("mine_iron");
+
+          for (const key of [
+            "hat",
+            "cape",
+            "lantern",
+            "statue",
+            "banner",
+            "fountain",
+          ]) {
+            const amount = countItemAmount(key);
+            if (getTreasureFlair(amount).tier >= 3) {
+              unlockAchievement("treasure_tier3");
+              break;
+            }
+          }
+
+          if (allAchievementsCleared() && !state.endingUnlocked) {
+            showEnding();
+          }
+        }
+
+        function unlockAchievement(id) {
+          if (!state.achievements[id]) {
+            state.achievements[id] = true;
+            const def = achievementDefs.find((a) => a.id === id);
+            if (def) setMessage(`업적 달성: ${def.title}`);
+          }
+        }
+
+        function allAchievementsCleared() {
+          return achievementDefs.every((a) => state.achievements[a.id]);
+        }
+
+        function getTreasureFlair(amount) {
+          if (amount >= 5) return { tier: 3, label: "전설적인" };
+          if (amount >= 3) return { tier: 2, label: "찬란한" };
+          return { tier: 1, label: "빛나는" };
+        }
+
+        function countOwnedTreasures() {
+          return shopItems.filter(
+            (item) => (state.ownedTreasures[item.key] || 0) > 0,
+          ).length;
+        }
+
+        function countItemAmount(key) {
+          return getCardsByKey(key).reduce(
+            (sum, card) => sum + (card.amount || 1),
+            0,
+          );
+        }
+
+        function getCardsByKey(key) {
+          return state.cards.filter((card) => card.key === key);
+        }
+
+        function getCardById(id) {
+          return state.cards.find((card) => card.id === id) || null;
+        }
+
+        function getCardDefinition(key) {
+          return cardData[key];
+        }
+
+        function isStackableKey(key) {
+          return !!getCardDefinition(key).stackable;
+        }
+
+        function clamp(value, min, max) {
+          return Math.max(min, Math.min(max, value));
+        }
+
+        function clampCardPosition(x, y) {
+          const width = board.clientWidth;
+          const height = board.clientHeight;
+
+          return {
+            x: clamp(x, 0, Math.max(0, width - CARD_WIDTH)),
+            y: clamp(y, 0, Math.max(0, height - CARD_HEIGHT)),
+          };
+        }
+
+        function getPreferredSpawnPosition(key, fallbackPosition) {
+          const sameTypeCards = getCardsByKey(key);
+          if (sameTypeCards.length > 0) {
+            const preferred = sameTypeCards.reduce(
+              (best, current) =>
+                current.amount > best.amount ? current : best,
+              sameTypeCards[0],
+            );
+            return clampCardPosition(preferred.x, preferred.y);
+          }
+          return clampCardPosition(fallbackPosition.x, fallbackPosition.y);
+        }
+
+        function findStackForSpawn(key, forceNewStack = false) {
+          if (!isStackableKey(key) || forceNewStack) return null;
+          return getCardsByKey(key)[0] || null;
+        }
+
+        function spawnCard(key, amount = 1, position = null, options = {}) {
+          const def = getCardDefinition(key);
+          if (!def) return null;
+
+          if (def.basicSource) {
+            const exists = state.cards.some((card) => card.key === key);
+            if (exists) return null;
+          }
+
+          const rawPos = position
+            ? clampCardPosition(position.x, position.y)
+            : getSafeSpawnPosition();
+          const spawnPos = getPreferredSpawnPosition(key, rawPos);
+          const forceNewStack = !!options.forceNewStack;
+
+          if (def.stackable) {
+            let stackCard = findStackForSpawn(key, forceNewStack);
+            if (!stackCard) {
+              stackCard = {
+                id: state.nextId++,
+                key,
+                amount: 0,
+                x: spawnPos.x,
+                y: spawnPos.y,
+                z: 0,
+                justSpawned: true,
+              };
+              bringToFront(stackCard);
+              state.cards.push(stackCard);
+            }
+            stackCard.amount += amount;
+            stackCard.x = spawnPos.x;
+            stackCard.y = spawnPos.y;
+            stackCard.justSpawned = true;
+            bringToFront(stackCard);
+            return stackCard;
+          }
+
+          const card = {
+            id: state.nextId++,
+            key,
+            amount: 1,
+            x: spawnPos.x,
+            y: spawnPos.y,
+            z: 0,
+            justSpawned: true,
+          };
+          bringToFront(card);
+          state.cards.push(card);
+          return card;
+        }
+
+        function bringToFront(card) {
+          state.topZ += 1;
+          card.z = state.topZ;
+        }
+
+        function clampCardPosition(x, y) {
+          const { width, height } = {
+            width: board.clientWidth,
+            height: board.clientHeight,
+          };
+          return {
+            x: clamp(x, 0, Math.max(0, width - CARD_WIDTH)),
+            y: clamp(y, 0, Math.max(0, height - CARD_HEIGHT)),
+          };
+        }
+
+        function getSafeSpawnPosition() {
+          const width = board.clientWidth;
+          const height = board.clientHeight;
+          return {
+            x:
+              Math.floor(
+                Math.random() * Math.max(1, width - CARD_WIDTH - 220),
+              ) + 10,
+            y:
+              Math.floor(
+                Math.random() * Math.max(1, height - CARD_HEIGHT - 30),
+              ) + 10,
+          };
+        }
+
+        function removeFromCard(cardId, count = 1) {
+          const card = getCardById(cardId);
+          if (!card) return;
+          const def = getCardDefinition(card.key);
+          if (def.basicSource) return;
+
+          if (def.stackable) {
+            card.amount -= count;
+            if (card.amount <= 0) {
+              state.cards = state.cards.filter((c) => c.id !== cardId);
+            }
+          } else {
+            state.cards = state.cards.filter((c) => c.id !== cardId);
+          }
+        }
+
+        function splitCard(cardId) {
+          const card = getCardById(cardId);
+          if (
+            !card ||
+            !getCardDefinition(card.key).stackable ||
+            card.amount < 2
+          )
+            return;
+
+          const splitAmount = Math.floor(card.amount / 2);
+          card.amount -= splitAmount;
+
+          const pos = clampCardPosition(card.x + 26, card.y + 26);
+          const newCard = {
+            id: state.nextId++,
+            key: card.key,
+            amount: splitAmount,
+            x: pos.x,
+            y: pos.y,
+            z: 0,
+            justSpawned: true,
+          };
+          bringToFront(newCard);
+          state.cards.push(newCard);
+          bringToFront(card);
+          unlockAchievement("first_split");
+          setMessage(`${getCardDefinition(card.key).name} 카드를 분할했다.`);
+          render();
+        }
+
+        function mergeStacks(cardId) {
+          const base = getCardById(cardId);
+          if (!base || !getCardDefinition(base.key).stackable) return;
+          const others = getCardsByKey(base.key).filter(
+            (c) => c.id !== base.id,
+          );
+          if (others.length === 0) return;
+
+          let moved = 0;
+          for (const other of others) {
+            moved += other.amount;
+            base.amount += other.amount;
+          }
+          state.cards = state.cards.filter(
+            (c) => c.key !== base.key || c.id === base.id,
+          );
+          bringToFront(base);
+          unlockAchievement("first_merge");
+
+          if (getCardDefinition(base.key).treasure) {
+            const flair = getTreasureFlair(base.amount);
+            if (flair.tier >= 3) unlockAchievement("treasure_tier3");
+            setMessage(
+              `${getCardDefinition(base.key).name} 보물이 하나로 합쳐지며 ${flair.label} 빛을 띠기 시작했다!`,
+            );
+          } else {
+            setMessage(
+              `${getCardDefinition(base.key).name} 묶음들을 합쳤다. (+${moved})`,
+            );
+          }
+          render();
+        }
+
+        function getCardCenter(card) {
+          return { x: card.x + CARD_WIDTH / 2, y: card.y + CARD_HEIGHT / 2 };
+        }
+
+        function getDistance(a, b) {
+          const ca = getCardCenter(a);
+          const cb = getCardCenter(b);
+          const dx = ca.x - cb.x;
+          const dy = ca.y - cb.y;
+          return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function getTargetCard(sourceCard) {
+          let best = null;
+          let bestDistance = Infinity;
+          for (const card of state.cards) {
+            if (card.id === sourceCard.id) continue;
+            const dist = getDistance(sourceCard, card);
+            if (dist < COMBINE_DISTANCE && dist < bestDistance) {
+              best = card;
+              bestDistance = dist;
+            }
+          }
+          return best;
+        }
+
+        function getCombineCenter(source, target) {
+          return clampCardPosition(
+            (source.x + target.x) / 2 + 14,
+            (source.y + target.y) / 2 + 14,
+          );
+        }
+
+        function addXp(amount) {
+          state.xp += amount;
+          while (state.xp >= state.xpNeeded) {
+            state.xp -= state.xpNeeded;
+            levelUp();
+          }
+        }
+
+        function levelUp() {
+          state.level += 1;
+          state.xpNeeded = Math.floor(state.xpNeeded * 1.35) + 4;
+          const houseBonus = state.cards.some((card) => card.key === "house")
+            ? 2
+            : 0;
+          state.maxHunger += 3 + houseBonus;
+          state.hunger = clamp(
+            state.hunger + 5 + houseBonus,
+            0,
+            state.maxHunger,
+          );
+
+          if (state.level >= 4) {
+            state.unlockedBasicSources.add("ironDeposit");
+            if (!state.cards.some((card) => card.key === "ironDeposit"))
+              spawnCard("ironDeposit", 1, null);
+          }
+          if (state.level >= 5) {
+            state.unlockedBasicSources.add("farm");
+            if (!state.cards.some((card) => card.key === "farm"))
+              spawnCard("farm", 1, null);
+          }
+
+          const unlock = levelUnlocks[state.level];
+          if (unlock) setMessage(unlock.message);
+          else setMessage(`레벨 ${state.level} 달성. 최대 배고픔이 증가했다.`);
+        }
+
+        function applyCombination(sourceId, targetId) {
+          const source = getCardById(sourceId);
+          const target = getCardById(targetId);
+          if (!source || !target) return false;
+
+          const rule = rules.find((rule) => {
+            const [a, b] = rule.keys;
+            return (
+              (a === source.key && b === target.key) ||
+              (a === target.key && b === source.key)
+            );
+          });
+
+          if (!rule) {
+            setMessage("아무 조합도 일어나지 않았다.");
+            return false;
+          }
+
+          if (state.level < rule.minLevel) {
+            setMessage(`이 조합은 레벨 ${rule.minLevel}부터 가능하다.`);
+            return false;
+          }
+
+          const result = rule.apply({
+            source,
+            target,
+            getCenter: () => getCombineCenter(source, target),
+          });
+
+          if (result.effects) result.effects();
+          if (Array.isArray(result.consume)) {
+            result.consume.forEach((item) =>
+              removeFromCard(item.id, item.count || 1),
+            );
+          }
+          if (Array.isArray(result.spawn)) {
+            result.spawn.forEach((item) =>
+              spawnCard(item.key, item.amount || 1, item.position || null),
+            );
+          }
+
+          addXp(rule.xp || 0);
+          updateProgressAchievements();
+          setMessage(`${rule.message} (+${rule.xp || 0} XP)`);
+          render();
+          return true;
+        }
+
+        function spawnRandomCollectible() {
+          const candidates = [
+            { key: "berry", amount: 1 },
+            { key: "wood", amount: 1 },
+            { key: "stone", amount: 1 },
+          ];
+          if (state.level >= 4) candidates.push({ key: "ironOre", amount: 1 });
+          if (state.level >= 5) candidates.push({ key: "wheat", amount: 1 });
+          if (state.level >= 7) candidates.push({ key: "coin", amount: 1 });
+
+          const pick =
+            candidates[Math.floor(Math.random() * candidates.length)];
+          spawnCard(pick.key, pick.amount, getSafeSpawnPosition());
+
+          const names = {
+            berry: "베리가 기존 베리 카드 위에 쌓였다.",
+            wood: "목재가 기존 목재 카드 위에 쌓였다.",
+            stone: "돌이 기존 돌 카드 위에 쌓였다.",
+            ironOre: "철광석이 기존 철광석 카드 위에 쌓였다.",
+            wheat: "밀이 기존 밀 카드 위에 쌓였다.",
+            coin: "코인이 기존 코인 카드 위에 쌓였다.",
+          };
+          setMessage(names[pick.key] || "재료가 같은 종류 카드 위에 쌓였다.");
+        }
+
+        function ensureBasicSourcePresence() {
+          for (const key of state.unlockedBasicSources) {
+            if (!state.cards.some((card) => card.key === key)) {
+              spawnCard(key, 1);
+            }
+          }
+        }
+
+        function countTotalCards() {
+          return state.cards.reduce((sum, card) => sum + (card.amount || 1), 0);
+        }
+
+        function getHints() {
+          const hints = [];
+          hints.push("최종 목표: 코인을 모아 보물 컬렉션을 완성하기");
+          hints.push("목재 + 돌 → 모닥불");
+          hints.push("모닥불 + 돌 → 화로");
+          hints.push("목재 + 목재 → 판자");
+          if (state.level >= 2) hints.push("판자 + 돌 → 도끼");
+          if (state.level >= 3) hints.push("돌 + 돌 → 곡괭이");
+          if (state.level >= 4) {
+            hints.push("사람 + 철 광맥 → 철광석");
+            hints.push("곡괭이 + 철 광맥 → 철광석 2개");
+            hints.push("화로 + 철광석 → 철괴");
+          }
+          if (state.level >= 5) hints.push("사람 + 농장 → 밀 / 화로 + 밀 → 빵");
+          if (state.level >= 6) {
+            hints.push("빵 + 빵 → 빵집 / 빵집 + 빵 → 코인");
+            hints.push("모닥불 + 빵 → 스프");
+          }
+          if (state.level >= 7) {
+            hints.push("코인 + 철괴 → 시장(상점 활성화)");
+            hints.push("시장 + 코인 → 고기");
+            hints.push("시장 + 빵 → 코인 2개");
+          }
+          if (state.level >= 8) {
+            hints.push("코인 + 베리 → 향신료");
+            hints.push("빵 + 고기 → 연회");
+            hints.push("시장 + 연회 → 코인 4개");
+          }
+          if (state.level >= 9) {
+            hints.push("판자 + 코인 → 수레");
+            hints.push("수레 + 연회 → 축제");
+          }
+          if (state.cards.some((c) => c.key === "market")) {
+            hints.push("시장을 만든 뒤 상점 열기 버튼이 활성화된다");
+          }
+          return (
+            "다음에 해볼 만한 행동\n\n" +
+            hints
+              .slice(0, 21)
+              .map((text, index) => `${index + 1}. ${text}`)
+              .join("\n")
+          );
+        }
+
+        function buyShopItem(itemKey) {
+          const item = shopItems.find((i) => i.key === itemKey);
+          if (!item) return;
+          if (!state.cards.some((c) => c.key === "market")) {
+            setMessage("보물 상점은 시장을 만든 뒤에 이용할 수 있다.");
+            return;
+          }
+
+          const totalCoins = countItemAmount("coin");
+          if (totalCoins < item.price) {
+            setMessage("코인이 부족하다.");
+            return;
+          }
+
+          let remaining = item.price;
+          for (const coinCard of [...getCardsByKey("coin")]) {
+            if (remaining <= 0) break;
+            const use = Math.min(coinCard.amount, remaining);
+            removeFromCard(coinCard.id, use);
+            remaining -= use;
+          }
+
+          const treasureCard = spawnCard(item.key, 1, getSafeSpawnPosition(), {
+            forceNewStack: false,
+          });
+          const flair = getTreasureFlair(
+            treasureCard ? treasureCard.amount : 1,
+          );
+          state.ownedTreasures[item.key] =
+            (state.ownedTreasures[item.key] || 0) + 1;
+          addXp(4);
+          updateProgressAchievements();
+          setMessage(
+            `${item.name}을(를) 구매했다! 보물이 ${flair.label} 빛을 띠기 시작한다.`,
+          );
+          render();
+        }
+
+        function renderShop() {
+          const marketBuilt = state.cards.some((c) => c.key === "market");
+          shopCoinText.textContent = `보유 코인: ${countItemAmount("coin")}`;
+          shopGrid.innerHTML = shopItems
+            .map(
+              (item) => `
+          <div class="shop-item">
+            <div class="shop-item-title">${item.name}</div>
+            <div class="shop-item-desc">${item.desc}</div>
+            <div class="shop-item-price">${item.price} 코인</div>
+            <div style="font-size:12px;color:#d6e0f4;margin-bottom:8px;">보유 수량: ${state.ownedTreasures[item.key] || 0}</div>
+            <button data-shop-key="${item.key}" ${!marketBuilt ? "disabled" : ""}>구매</button>
+          </div>
+        `,
+            )
+            .join("");
+        }
+
+        function renderGoals() {
+          goalList.innerHTML = shopItems
+            .map((item) => {
+              const owned = state.ownedTreasures[item.key] || 0;
+              return `
+            <div class="goal-item ${owned > 0 ? "done" : ""}">
+              <span>${item.name}</span>
+              <span>${owned > 0 ? `획득 x${owned}` : "미획득"}</span>
+            </div>
+          `;
+            })
+            .join("");
+        }
+
+        function renderAchievements() {
+          achievementList.innerHTML = achievementDefs
+            .map(
+              (item) => `
+          <div class="achievement-item ${state.achievements[item.id] ? "done" : ""}">
+            <div class="achievement-item-title">${item.title}</div>
+            <div class="achievement-item-desc">${item.desc}</div>
+            <div class="achievement-status">${state.achievements[item.id] ? "달성 완료" : "미달성"}</div>
+          </div>
+        `,
+            )
+            .join("");
+        }
+
+        function togglePause() {
+          if (
+            state.gameOver ||
+            state.ended ||
+            startModal.style.display !== "none"
+          )
+            return;
+          state.paused = !state.paused;
+          pauseButton.textContent = state.paused ? "재생" : "일시정지";
+          setMessage(
+            state.paused ? "게임이 일시정지되었다." : "게임이 다시 시작되었다.",
+          );
+        }
+
+        function showEnding() {
+          state.endingUnlocked = true;
+          state.ended = true;
+          state.paused = true;
+          endingButton.style.display = "inline-block";
+          endingText.innerHTML = `
+모든 업적을 완성한 순간,
+그는 모아온 코인과 보물들을 조용히 펼쳐 놓았다.
+
+이 여정은 생존이 아니었다.
+굶주림 속에서 얻은 코인,
+직접 만들고 교환하며 쌓은 보물
+그 모든 시간은 하나의 열쇠였다.
+
+그가 찾고 있던 것은, ‘황혼의 금고’.
+
+마지막 보물이 자리를 채우자,
+하늘에 금고의 문양이 떠올랐다.
+
+문은 열리지 않았다.
+하지만 틈 사이로, 낡은 지도 한 장이 떨어졌다.
+
+“북쪽 안개 바다를 넘어라.
+다음 열쇠는… 살아 있는 유산 속에 있다.”
+
+그는 망설이지 않았다.
+보물을 수레에 싣고, 북쪽을 향해 걸음을 옮겼다.
+
+이번 여정은 끝났다.
+
+하지만
+진짜 탐험은, 지금부터다.
+
+<span class="ending-gold">★ 보물 6개가 밝게 빛나며 사라졌고, 그 자리에 황금빛 열쇠가 나타났다. ★</span>
+
+이제, 다음 여정을 준비할 시간이다.
+북쪽 안개 바다가 기다리고 있다.
+
+The Stacker 2
+Coming Soon`;
+          endingModal.style.display = "flex";
+        }
+
+        function gameTick() {
+          if (state.gameOver || state.paused || state.ended) return;
+
+          state.elapsedTime += 1;
+          state.tickCount += 1;
+
+          if (state.tickCount % HUNGER_DECAY_INTERVAL === 0) {
+            state.hunger = clamp(state.hunger - 1, 0, state.maxHunger);
+          }
+
+          if (state.tickCount % RESOURCE_SPAWN_INTERVAL === 0) {
+            spawnRandomCollectible();
+          }
+
+          ensureBasicSourcePresence();
+          updateProgressAchievements();
+
+          if (state.hunger <= 0) {
+            endGame();
+            return;
+          }
+
+          render();
+        }
+
+        function endGame() {
+          state.gameOver = true;
+          clearInterval(state.timer);
+          gameoverText.textContent = `배고픔이 0이 되어 생존에 실패했습니다. 생존 시간: ${state.elapsedTime}초 / 도달 레벨: ${state.level} / 수집 보물 종류: ${countOwnedTreasures()}개`;
+          overlay.style.display = "flex";
+          render();
+        }
+
+        function isOverTrash(card) {
+          const trashRect = trashBin.getBoundingClientRect();
+          const boardRect = board.getBoundingClientRect();
+          const centerX = boardRect.left + card.x + CARD_WIDTH / 2;
+          const centerY = boardRect.top + card.y + CARD_HEIGHT / 2;
+          return (
+            centerX >= trashRect.left &&
+            centerX <= trashRect.right &&
+            centerY >= trashRect.top &&
+            centerY <= trashRect.bottom
+          );
+        }
+
+        function render() {
+          hungerStatEl.textContent = state.hunger;
+          maxHungerStatEl.textContent = state.maxHunger;
+          levelStatEl.textContent = state.level;
+          xpStatEl.textContent = state.xp;
+          xpNeedStatEl.textContent = state.xpNeeded;
+          coinStatEl.textContent = countItemAmount("coin");
+          timeStatEl.textContent = state.elapsedTime;
+          cardCountStatEl.textContent = countTotalCards();
+          xpBarEl.style.width = `${(state.xp / state.xpNeeded) * 100}%`;
+          hintTooltip.textContent = getHints();
+
+          dangerPanel.style.display =
+            state.hunger <= 5 && state.hunger > 0 ? "block" : "none";
+
+          const marketBuilt = state.cards.some((c) => c.key === "market");
+          shopButton.classList.toggle("locked", !marketBuilt);
+          shopButton.title = marketBuilt
+            ? "보물 상점을 열 수 있다."
+            : "시장을 만든 후에 이용할 수 있다.";
+          endingButton.style.display = state.endingUnlocked
+            ? "inline-block"
+            : "none";
+
+          renderShop();
+          renderGoals();
+          renderAchievements();
+
+          const existingEls = new Map();
+          board.querySelectorAll(".card").forEach((el) => {
+            existingEls.set(Number(el.dataset.id), el);
+          });
+
+          state.cards.sort((a, b) => a.z - b.z);
+
+          for (const card of state.cards) {
+            let el = existingEls.get(card.id);
+            if (!el) {
+              el = document.createElement("div");
+              el.className = "card";
+              el.dataset.id = card.id;
+              attachDrag(el, card.id);
+              board.appendChild(el);
+            } else {
+              existingEls.delete(card.id);
+            }
+
+            const def = getCardDefinition(card.key);
+            const sameKeyCount = getCardsByKey(card.key).length;
+            el.dataset.key = card.key;
+            el.style.left = card.x + "px";
+            el.style.top = card.y + "px";
+            el.style.zIndex = card.z;
+
+            const splitButton =
+              def.stackable && card.amount >= 2
+                ? `<button class="mini-btn split-btn" data-card-id="${card.id}">분할</button>`
+                : "";
+
+            const mergeButton =
+              def.stackable && sameKeyCount >= 2
+                ? `<button class="mini-btn merge-btn" data-card-id="${card.id}">합치기</button>`
+                : "";
+
+            let title = def.name;
+            let extraClass = "";
+
+            if (def.treasure) {
+              const flair = getTreasureFlair(card.amount);
+              title = `${"✨".repeat(Math.min(flair.tier, 3))} ${def.name}`;
+              extraClass = ` treasure-tier-${flair.tier} treasure-sheen`;
+            }
+
+            el.className = `card${card.justSpawned ? " spawn" : ""}${extraClass}`;
+            el.innerHTML = `
+            <div>
+              <div class="card-title">${title}</div>
+              <div class="card-type">${def.type}</div>
+              <div class="card-desc">${def.description}</div>
+            </div>
+            <div class="card-footer">
+              ${def.stackable ? `<div class="card-stack">x${card.amount}</div>` : `<div></div>`}
+              <div class="card-actions">${mergeButton}${splitButton}</div>
+            </div>
+          `;
+            if (card.justSpawned) card.justSpawned = false;
+          }
+
+          existingEls.forEach((el) => el.remove());
+        }
+
+        function attachDrag(el, cardId) {
+          let dragging = false;
+          let offsetX = 0;
+          let offsetY = 0;
+          let hoverId = null;
+
+          const clearHover = () => {
+            if (hoverId !== null) {
+              const hoverEl = board.querySelector(
+                `.card[data-id="${hoverId}"]`,
+              );
+              if (hoverEl) hoverEl.classList.remove("hover-target");
+              hoverId = null;
+            }
+          };
+
+          const updateHover = (id) => {
+            if (hoverId === id) return;
+            clearHover();
+            hoverId = id;
+            if (hoverId !== null) {
+              const hoverEl = board.querySelector(
+                `.card[data-id="${hoverId}"]`,
+              );
+              if (hoverEl) hoverEl.classList.add("hover-target");
+            }
+          };
+
+          const onMouseMove = (e) => {
+            if (!dragging || state.gameOver || state.paused || state.ended)
+              return;
+            const card = getCardById(cardId);
+            if (!card) return;
+
+            const boardRect = board.getBoundingClientRect();
+            const nextX = e.clientX - boardRect.left - offsetX;
+            const nextY = e.clientY - boardRect.top - offsetY;
+            const pos = clampCardPosition(nextX, nextY);
+
+            card.x = pos.x;
+            card.y = pos.y;
+
+            render();
+
+            if (isOverTrash(card)) {
+              trashBin.classList.add("active");
+              clearHover();
+            } else {
+              trashBin.classList.remove("active");
+              const target = getTargetCard(card);
+              updateHover(target ? target.id : null);
+            }
+          };
+
+          const onMouseUp = () => {
+            if (!dragging) return;
+            dragging = false;
+            el.classList.remove("dragging");
+            trashBin.classList.remove("active");
+
+            const card = getCardById(cardId);
+            if (card) {
+              if (isOverTrash(card)) {
+                const def = getCardDefinition(card.key);
+                if (def.basicSource || def.treasure) {
+                  setMessage(
+                    def.treasure
+                      ? "보물 카드는 버릴 수 없다."
+                      : "기본 자원 카드는 버릴 수 없다.",
+                  );
+                  render();
+                } else {
+                  state.cards = state.cards.filter((c) => c.id !== card.id);
+                  setMessage(`${def.name} 카드를 버렸다.`);
+                  render();
+                }
+              } else {
+                const target = getTargetCard(card);
+                clearHover();
+                if (target) applyCombination(card.id, target.id);
+                else render();
+              }
+            }
+
+            window.removeEventListener("mousemove", onMouseMove);
+            window.removeEventListener("mouseup", onMouseUp);
+          };
+
+          el.addEventListener("mousedown", (e) => {
+            if (state.gameOver || state.paused || state.ended) return;
+            if (
+              e.target.closest(".split-btn") ||
+              e.target.closest(".merge-btn")
+            )
+              return;
+
+            const card = getCardById(cardId);
+            if (!card) return;
+
+            dragging = true;
+            bringToFront(card);
+
+            const rect = el.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+
+            el.classList.add("dragging");
+
+            window.addEventListener("mousemove", onMouseMove);
+            window.addEventListener("mouseup", onMouseUp);
+          });
+        }
+
+        board.addEventListener("click", (e) => {
+          const splitBtn = e.target.closest(".split-btn");
+          if (splitBtn) {
+            e.stopPropagation();
+            splitCard(Number(splitBtn.dataset.cardId));
+            return;
+          }
+          const mergeBtn = e.target.closest(".merge-btn");
+          if (mergeBtn) {
+            e.stopPropagation();
+            mergeStacks(Number(mergeBtn.dataset.cardId));
+          }
+        });
+
+        shopButton.addEventListener("click", () => {
+          if (!state.cards.some((c) => c.key === "market")) {
+            setMessage("시장을 만든 후에 상점을 이용할 수 있다.");
+            return;
+          }
+          shopModal.style.display = "flex";
+          renderShop();
+        });
+
+        closeShopBtn.addEventListener("click", () => {
+          shopModal.style.display = "none";
+        });
+
+        shopGrid.addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-shop-key]");
+          if (!btn) return;
+          buyShopItem(btn.dataset.shopKey);
+        });
+
+        achievementButton.addEventListener("click", () => {
+          achievementModal.style.display = "flex";
+          renderAchievements();
+        });
+
+        closeAchievementBtn.addEventListener("click", () => {
+          achievementModal.style.display = "none";
+        });
+
+        endingButton.addEventListener("click", () => {
+          if (state.endingUnlocked) endingModal.style.display = "flex";
+        });
+
+        closeEndingBtn.addEventListener("click", () => {
+          endingModal.style.display = "none";
+        });
+
+        continueEndingBtn.addEventListener("click", () => {
+          endingModal.style.display = "none";
+          if (state.endingUnlocked) {
+            state.ended = false;
+            state.paused = false;
+            pauseButton.textContent = "일시정지";
+            setMessage("엔딩 이후의 세계를 계속 탐험한다.");
+          }
+        });
+
+        function clearBoardCards() {
+          board.querySelectorAll(".card").forEach((el) => el.remove());
+        }
+
+        function setMessage(text) {
+          messageEl.textContent = text;
+        }
+
+        function setupInitialWorld() {
+          clearBoardCards();
+
+          state.cards = [];
+          state.nextId = 1;
+          state.topZ = 1;
+          state.hunger = 20;
+          state.maxHunger = 20;
+          state.elapsedTime = 0;
+          state.tickCount = 0;
+          state.gameOver = false;
+          state.ended = false;
+          state.endingUnlocked = false;
+          state.level = 1;
+          state.xp = 0;
+          state.xpNeeded = 12;
+          state.unlockedBasicSources = new Set([
+            "tree",
+            "berryBush",
+            "stoneDeposit",
+          ]);
+          state.ownedTreasures = {};
+          state.achievements = {};
+
+          spawnCard("villager", 1, { x: 70, y: 120 }, { forceNewStack: true });
+          spawnCard("tree", 1, { x: 270, y: 100 });
+          spawnCard("berryBush", 1, { x: 460, y: 110 });
+          spawnCard("stoneDeposit", 1, { x: 650, y: 120 });
+
+          spawnCard("wood", 4, { x: 210, y: 300 });
+          spawnCard("berry", 4, { x: 420, y: 300 });
+          spawnCard("stone", 4, { x: 620, y: 300 });
+
+          setMessage("살아남기 위해 우선 먹을 것을 찾아보자.");
+          render();
+        }
+
+        startGameBtn.onclick = () => {
+          setupInitialWorld();
+          startModal.style.display = "none";
+          state.paused = false;
+          pauseButton.textContent = "일시정지";
+        };
+
+        restartEndingBtn.addEventListener("click", resetGame);
+        pauseButton.addEventListener("click", togglePause);
+        restartBtn.addEventListener("click", resetGame);
+
+        window.addEventListener("resize", () => {
+          if (!state) return;
+          state.cards.forEach((card) => {
+            const pos = clampCardPosition(card.x, card.y);
+            card.x = pos.x;
+            card.y = pos.y;
+          });
+          render();
+        });
+
+        function resetGame() {
+          if (state && state.timer) clearInterval(state.timer);
+          state = createInitialState();
+
+          overlay.style.display = "none";
+          shopModal.style.display = "none";
+          achievementModal.style.display = "none";
+          endingModal.style.display = "none";
+          startModal.style.display = "flex";
+          pauseButton.textContent = "일시정지";
+          endingButton.style.display = "none";
+
+          clearBoardCards();
+          render();
+
+          state.timer = setInterval(gameTick, TICK_MS);
+        }
+
+        resetGame();
+      })();
+    </script>
+  </body>
+</html>
